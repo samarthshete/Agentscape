@@ -1,7 +1,7 @@
 import type { Post } from "@/lib/data";
 import { TypeBadge } from "./TypeBadge";
 import { VerificationBadge } from "./VerificationBadge";
-import { ExternalIcon } from "./icons";
+import { CheckIcon, ExternalIcon } from "./icons";
 import { formatProof, formatTimestamp, initial } from "./format";
 
 interface Props {
@@ -22,18 +22,19 @@ export function WorkSampleCard({
   verified,
   href,
 }: Props) {
-  const proofRows = formatProof(post.proof);
+  const { metrics, context } = formatProof(post.proof);
+  const hasProof = metrics.length > 0 || context.length > 0;
 
   return (
     <article className="group rounded-card border border-divider bg-card p-[18px] pb-[14px] transition-colors hover:border-faint">
-      <header className="flex items-start justify-between gap-3">
+      <header className="flex items-start justify-between gap-2.5">
         <div className="flex min-w-0 items-center gap-2.5">
           <div className="flex h-[34px] w-[34px] flex-none items-center justify-center rounded-control border border-border bg-subtle font-mono text-[15px] font-medium text-foreground/80">
             {initial(agentName)}
           </div>
           <div className="min-w-0">
-            <div className="flex items-center gap-1.5">
-              <span className="truncate text-[14px] font-[560] text-foreground">
+            <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
+              <span className="text-[14px] font-[560] leading-tight text-foreground">
                 {agentName}
               </span>
               <VerificationBadge verified={verified} variant="compact" />
@@ -55,7 +56,7 @@ export function WorkSampleCard({
         </p>
       ) : null}
 
-      {proofRows.length > 0 ? (
+      {hasProof ? (
         <section
           aria-label="Proof"
           className="mt-[15px] rounded-control border border-divider bg-subtle p-[13px]"
@@ -65,19 +66,60 @@ export function WorkSampleCard({
               proof
             </span>
             <span className="h-px flex-1 bg-divider" />
+            <CheckIcon className="h-[11px] w-[11px] text-faint" />
           </div>
-          <div className="grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-x-[18px] gap-y-[14px]">
-            {proofRows.map((row) => (
-              <div key={row.key} className="min-w-0">
-                <div className="truncate font-mono text-[11px] text-faint">
-                  {row.key}
+
+          {metrics.length > 0 ? (
+            <div className="grid grid-cols-[repeat(auto-fit,minmax(140px,1fr))] gap-x-[18px] gap-y-[14px]">
+              {metrics.map((m, i) => (
+                <div key={`${m.label}-${m.note ?? ""}-${i}`} className="min-w-0">
+                  <div className="truncate font-mono text-[11px] text-faint">
+                    {m.label}
+                  </div>
+                  <div className="mt-[3px] font-mono text-[16px] font-medium tabular-nums tracking-[-0.01em] text-foreground">
+                    {m.value}
+                  </div>
+                  {m.note ? (
+                    <div className="mt-px truncate font-mono text-[10.5px] text-faint/80">
+                      {m.note}
+                    </div>
+                  ) : null}
                 </div>
-                <div className="mt-[3px] font-mono text-[16px] font-medium tabular-nums tracking-[-0.01em] text-foreground">
-                  {row.value}
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : null}
+
+          {context.length > 0 ? (
+            <div
+              className={`flex flex-wrap gap-x-4 gap-y-1.5 ${
+                metrics.length > 0
+                  ? "mt-3 border-t border-divider pt-3"
+                  : ""
+              }`}
+            >
+              {context.map((c) => (
+                <span
+                  key={c.label}
+                  title={`${c.label}: ${c.value}`}
+                  className="flex min-w-0 items-baseline gap-1.5 font-mono text-[11px]"
+                >
+                  <span className="flex-none text-faint">{c.label}</span>
+                  {c.href ? (
+                    <a
+                      href={c.href}
+                      className="max-w-[200px] truncate text-muted underline-offset-2 hover:underline"
+                    >
+                      {c.value}
+                    </a>
+                  ) : (
+                    <span className="max-w-[220px] truncate text-muted">
+                      {c.value}
+                    </span>
+                  )}
+                </span>
+              ))}
+            </div>
+          ) : null}
         </section>
       ) : null}
 

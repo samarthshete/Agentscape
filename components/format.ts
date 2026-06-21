@@ -3,50 +3,88 @@
 // timestamps, post types) into display strings.
 import type { PostProof, PostType } from "@/lib/data";
 
-export interface ProofRow {
-  key: string;
+// A headline evidence figure (the numbers that lead). `note` carries the parent
+// group name for nested values (e.g. "baseline", "before") so labels stay clean.
+export interface ProofMetric {
+  label: string;
   value: string;
+  note?: string;
 }
 
-function formatScalar(value: number | string | boolean): string {
-  if (typeof value === "number") {
-    return Number.isInteger(value) && Math.abs(value) >= 1000
-      ? value.toLocaleString("en-US")
-      : String(value);
-  }
-  return String(value);
+// Secondary descriptive context (dataset, version, refs) — shown de-emphasized.
+export interface ProofContext {
+  label: string;
+  value: string;
+  href?: string;
 }
 
-// Flatten a proof payload (depth ≤ 2) into mono key/value rows for the proof
-// block. Skips url-like keys and caps the row count to keep the card a credential.
-export function formatProof(proof: PostProof, limit = 6): ProofRow[] {
-  const rows: ProofRow[] = [];
+export interface ProofDisplay {
+  metrics: ProofMetric[];
+  context: ProofContext[];
+}
 
-  const push = (key: string, value: unknown): void => {
-    if (rows.length >= limit) return;
+function formatNumber(value: number): string {
+  return Number.isInteger(value) && Math.abs(value) >= 1000
+    ? value.toLocaleString("en-US")
+    : String(value);
+}
+
+function isUrl(value: string): boolean {
+  return /^https?:\/\//i.test(value);
+}
+
+// Shape an arbitrary proof payload into a designed credential, not a JSON dump.
+// Generic over any agent's keys:
+//   - numeric leaves → the headline evidence grid; labels are de-pathed (last
+//     segment), and nested groups (baseline / before / after) carry the group
+//     name as a small note instead of a dotted key,
+//   - a `metrics:{…}` container leads,
+//   - strings / urls / arrays → a secondary, de-emphasized context row.
+export function formatProof(proof: PostProof): ProofDisplay {
+  const metrics: ProofMetric[] = [];
+  const context: ProofContext[] = [];
+
+  const add = (label: string, value: unknown, note?: string): void => {
     if (value === null || value === undefined) return;
-    if (key.toLowerCase().includes("url")) return;
-    if (Array.isArray(value)) {
-      rows.push({ key, value: value.map((v) => String(v)).join(", ") });
-    } else if (typeof value === "object") {
-      return; // handled one level up
-    } else {
-      rows.push({ key, value: formatScalar(value as number | string | boolean) });
+    if (typeof value === "number") {
+      metrics.push({ label, value: formatNumber(value), note });
+    } else if (typeof value === "boolean") {
+      context.push({ label, value: value ? "yes" : "no" });
+    } else if (typeof value === "string") {
+      context.push(
+        isUrl(value) ? { label, value, href: value } : { label, value },
+      );
     }
   };
 
+  // Headline metrics from a `metrics` container lead the grid.
+  const metricsObj = proof["metrics"];
+  if (
+    metricsObj !== null &&
+    typeof metricsObj === "object" &&
+    !Array.isArray(metricsObj)
+  ) {
+    for (const [k, v] of Object.entries(metricsObj)) add(k, v);
+  }
+
   for (const [key, value] of Object.entries(proof)) {
-    if (rows.length >= limit) break;
-    if (value !== null && typeof value === "object" && !Array.isArray(value)) {
-      for (const [k2, v2] of Object.entries(value as Record<string, unknown>)) {
-        push(`${key}.${k2}`, v2);
+    if (key === "metrics") continue;
+    if (Array.isArray(value)) {
+      context.push({ label: key, value: value.map((v) => String(v)).join(", ") });
+    } else if (value !== null && typeof value === "object") {
+      // Nested group (baseline / before / after, …): de-path children, keep the
+      // group name as the note rather than a "group.child" dotted key.
+      for (const [childKey, childVal] of Object.entries(
+        value as Record<string, unknown>,
+      )) {
+        add(childKey, childVal, key);
       }
     } else {
-      push(key, value);
+      add(key, value);
     }
   }
 
-  return rows.slice(0, limit);
+  return { metrics, context };
 }
 
 // Format a known agent metric into a value + optional unit (e.g. success_rate

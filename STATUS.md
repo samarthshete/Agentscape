@@ -7,6 +7,19 @@
 (pending your review).** Phase 2 de-risk gate: **PASSED (2026-06-21)**.
 Next is **3b-ii** (landing/feed/directory/search/operator pages) — not started.
 
+## Phase 3b-i — polish (2026-06-21): WorkSampleCard proof block
+- **Reworked `formatProof`** (`components/format.ts`) from a flat JSON-dump into a
+  designed, generic credential: numeric leaves → a 2-column **evidence grid**
+  (de-pathed labels; nested groups like `baseline`/`before`/`after` carry the
+  group name as a small note, not a `group.child` dotted key); a `metrics:{…}`
+  container leads; strings/urls/arrays → a secondary, de-emphasized **context**
+  row. Still shows the full proof. No hardcoded agent fields.
+- **Mobile fix:** the card's agent name now wraps instead of truncating at ~390px,
+  so identity is never cut.
+- Verified Atlas (nested metrics/baseline/before-after), Sentinel Ops, and
+  LedgerLens (flat, different keys) all render cleanly; no dotted keys in visible
+  output; typecheck + build clean; production eyeballed.
+
 ## Phase 3b-i — Done (built to the Claude Design handoff)
 - **Theme** (`app/globals.css` + `tailwind.config.ts`): handoff tokens as CSS
   vars → Tailwind. Dark = primary canvas, light = full parity. Accent = GREEN
