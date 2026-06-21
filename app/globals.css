@@ -1,3 +1,104 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/*
+  Design tokens from the Claude Design handoff. Dark is the primary canvas;
+  light is full parity. The `.dark` class is set pre-paint by an inline script
+  in the root layout (respects prefers-color-scheme + a stored override).
+*/
+:root {
+  /* Light — full parity */
+  --background: #ffffff;
+  --subtle: #f7f7f8;
+  --card: #ffffff;
+  --border: #ececee;
+  --divider: #f0f0f1;
+  --foreground: #18181b;
+  --muted: #52525b;
+  --faint: #71717a;
+  --accent: #047a4a; /* AA-safe green for fills/CTAs in light */
+  --accent-strong: #047a4a;
+  --accent-foreground: #ffffff;
+  --verified: #047a4a;
+  --verified-bg: rgba(4, 122, 74, 0.08);
+  --verified-border: rgba(4, 122, 74, 0.22);
+
+  /* Type badges — light (darker fg for AA on light tints) */
+  --badge-launch-fg: #2563eb;
+  --badge-launch-bg: rgba(37, 99, 235, 0.08);
+  --badge-launch-bd: rgba(37, 99, 235, 0.22);
+  --badge-changelog-fg: #7c3aed;
+  --badge-changelog-bg: rgba(124, 58, 237, 0.08);
+  --badge-changelog-bd: rgba(124, 58, 237, 0.22);
+  --badge-benchmark-fg: #b45309;
+  --badge-benchmark-bg: rgba(180, 83, 9, 0.08);
+  --badge-benchmark-bd: rgba(180, 83, 9, 0.22);
+  --badge-task-fg: #047a4a;
+  --badge-task-bg: rgba(4, 122, 74, 0.08);
+  --badge-task-bd: rgba(4, 122, 74, 0.22);
+  --badge-note-fg: #52525b;
+  --badge-note-bg: rgba(0, 0, 0, 0.04);
+  --badge-note-bd: rgba(0, 0, 0, 0.12);
+}
+
+.dark {
+  /* Dark — primary canvas */
+  --background: #08090a;
+  --subtle: #0d0e10;
+  --card: #111214;
+  --border: #25282d;
+  --divider: #1b1d21;
+  --foreground: #ededef;
+  --muted: #a0a2a8;
+  --faint: #6b6e76;
+  --accent: #34e29b;
+  --accent-strong: #119d68;
+  --accent-foreground: #06140d;
+  --verified: #4fe0a6;
+  --verified-bg: rgba(52, 226, 155, 0.08);
+  --verified-border: rgba(52, 226, 155, 0.2);
+
+  /* Type badges — dark (from handoff) */
+  --badge-launch-fg: #7aa7ff;
+  --badge-launch-bg: rgba(86, 135, 255, 0.1);
+  --badge-launch-bd: rgba(86, 135, 255, 0.22);
+  --badge-changelog-fg: #b9a8f7;
+  --badge-changelog-bg: rgba(167, 139, 250, 0.1);
+  --badge-changelog-bd: rgba(167, 139, 250, 0.22);
+  --badge-benchmark-fg: #e6b572;
+  --badge-benchmark-bg: rgba(230, 170, 90, 0.1);
+  --badge-benchmark-bd: rgba(230, 170, 90, 0.22);
+  --badge-task-fg: #4fe0a6;
+  --badge-task-bg: rgba(52, 226, 155, 0.1);
+  --badge-task-bd: rgba(52, 226, 155, 0.22);
+  --badge-note-fg: #9aa0a8;
+  --badge-note-bg: rgba(255, 255, 255, 0.05);
+  --badge-note-bd: rgba(255, 255, 255, 0.12);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+}
+
+::selection {
+  background: rgba(52, 226, 155, 0.22);
+}
+
+/* Accessibility: respect reduced-motion for every transition/animation. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+
+/* Visible keyboard focus everywhere. */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}

@@ -8,7 +8,14 @@ import { createServerClient } from "../supabase/server";
 import { mapAgent, mapPost, mapProfile } from "./mappers";
 import type { Agent, Post, Profile } from "./types";
 
-export type { Agent, Post, Profile } from "./types";
+export type {
+  Agent,
+  Post,
+  Profile,
+  PostType,
+  PostProof,
+  AgentMetrics,
+} from "./types";
 
 interface PageParams {
   limit?: number;

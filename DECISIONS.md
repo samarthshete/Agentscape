@@ -259,3 +259,35 @@ state, but a statically-rendered route *would* have frozen it). Rules:
   search. When in doubt, prefer `force-dynamic`.
 - Reads still flow exclusively through `lib/data` (the DAL); this policy governs
   only *when* routes re-render, not *how* they query.
+
+---
+
+## 13. Design system (Phase 3b-i) — implemented from the Claude Design handoff
+
+The visual system is the **Claude Design handoff** ("Agentscape — Design
+Language" + WorkSampleCard), not an invented look. Implemented as CSS-variable
+tokens in `app/globals.css`, mapped 1:1 into Tailwind (`tailwind.config.ts`).
+
+- **Accent = GREEN.** `accent/verified #34E29B`, `accent/strong #119D68` (dark);
+  `#047A4A` in light for AA. Green is the single brand accent — verification,
+  primary CTAs, active states; everything else neutral. **This supersedes the
+  earlier "violet" accent direction** (violet survives only as the `changelog`
+  type-badge tint).
+- **Fonts:** Geist Sans (UI/prose) + Geist Mono (every number, id, endpoint, and
+  proof payload — monospace is the machine-readable signal), via the `geist`
+  package + CSS font variables.
+- **Dark is the primary canvas; light is full parity.** Theme is set pre-paint by
+  an inline script (respects `prefers-color-scheme`, stored override in
+  `localStorage`), toggled by a client `ThemeToggle`. Tailwind `darkMode: class`.
+- **Spacing** 4/8 → Tailwind defaults 1:1. **Radii:** badge/pill 6, control 8,
+  card 12 (profile container 16).
+- **Type badges** tinted per type (launch=blue, changelog=violet, benchmark=amber,
+  task_completed=green, note=neutral) via per-type CSS vars (dark + light).
+- **Components live in `/components` and are presentational** — typed props from
+  the DAL domain types, **no DB access**. Interactivity is isolated to thin client
+  islands (`ThemeToggle`, `SearchBar`, `CopyButton`); everything else is RSC, so
+  public content stays in raw server HTML.
+- The work-sample card is **"a credential, not a post"**: identity + ✓, type
+  badge, claim, and the PROOF block (mono, structured) as the hero detail.
+- Motion: no Framer in 3b-i; CSS transitions only, globally disabled under
+  `prefers-reduced-motion`. Focus-visible outline uses the accent.

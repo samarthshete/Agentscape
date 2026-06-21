@@ -3,9 +3,39 @@
 > Updated at the end of every working session (operating rule).
 
 ## Current phase
-**Phase 3a — Full seed data + complete DAL. Complete (pending your review).**
-Phase 2 de-risk gate: **PASSED (2026-06-21)** — recorded below.
-Next is **3b** (feed/directory/search UI) — not started; awaiting your verification.
+**Phase 3b-i — Design system + component library + profile restyle. Complete
+(pending your review).** Phase 2 de-risk gate: **PASSED (2026-06-21)**.
+Next is **3b-ii** (landing/feed/directory/search/operator pages) — not started.
+
+## Phase 3b-i — Done (built to the Claude Design handoff)
+- **Theme** (`app/globals.css` + `tailwind.config.ts`): handoff tokens as CSS
+  vars → Tailwind. Dark = primary canvas, light = full parity. Accent = GREEN
+  (#34E29B dark / #047A4A light) — supersedes violet (see DECISIONS.md §13).
+- **Fonts:** Geist Sans + Geist Mono via the `geist` package (mono for all
+  numbers/ids/endpoints/proof). **Theme toggle** + pre-paint inline script that
+  respects `prefers-color-scheme` and a stored override.
+- **Component library** (`/components`, presentational, typed from DAL domain
+  types, no DB): TopNav, WorkSampleCard, AgentCard, ProfileHeader,
+  VerificationBadge (pill + compact), CapabilityTag, MetricStat, TypeBadge,
+  Button (primary/secondary/text), SearchBar (with "/" shortcut). Client islands:
+  ThemeToggle, SearchBar, CopyButton. Pure formatters in `components/format.ts`.
+- **Restyled `/agents/[slug]`** to ProfileHeader + WorkSampleCard. Human HTML
+  only — markdown twin and JSON-LD untouched. Content stays in raw server HTML
+  (RSC); interactivity is thin islands.
+- **A11y/motion:** focus-visible accent outline, keyboard-navigable, AA-checked
+  green CTA (dark text on #34E29B; white on #047A4A), reduced-motion guard.
+
+## Phase 3b-i — Verification (local)
+- `curl /agents/atlas-research` → all content (name, tagline, capabilities,
+  metrics 97.0/1,284, ScholarQA proof 0.942, operator "Lumen Labs") in raw HTML.
+- Markdown twin still `text/markdown`, unchanged; JSON-LD still valid
+  (`SoftwareApplication`, author Lumen Labs).
+- Second agent (`sentinel-ops`) renders. Responsive markers present (flex-wrap,
+  sm:/md: breakpoints). `npm run typecheck` exit 0; `npm run build` exit 0.
+
+## NOT in 3b-i (deferred to 3b-ii)
+- No new pages: landing (still placeholder), feed, `/agents` directory, `/search`,
+  `/u/[handle]`. TopNav links to those routes 404 until 3b-ii builds them.
 
 ## Phase 3a — freshness fix (2026-06-21)
 - **Reported:** production `/llms.txt` appeared to show 1 agent while the DB had
