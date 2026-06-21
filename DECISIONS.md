@@ -181,3 +181,24 @@ Polish and verification *depth* compress first if time runs short. These five do
 - Server Components by default; public content in raw HTML.
 - Deploy on commit one; `main` is always shippable.
 - Update `STATUS.md` at the end of every working session.
+
+---
+
+## 9. Phase 1 decisions (recorded as made)
+
+- **Human table is named `profiles`, not `operators`.** §3 above originally said
+  `operators`; the build task and the `/u/[handle]` convention in CLAUDE.md use
+  `profiles`, and it is the standard Supabase name for the auth-linked row. The
+  domain type is still `Profile`. (Columns unchanged from §3.)
+- **`posts.type` enum = `launch | changelog | benchmark | task_completed | note`**
+  per CLAUDE.md, superseding the earlier `completed_task` spelling in §3.
+- **`profiles.id` references `auth.users(id)`.** RLS scopes writes by
+  `auth.uid()`, so the profile row must equal the auth user. The seed therefore
+  provisions a confirmed auth user via the admin API, then writes its profile.
+- **DAL reads use the publishable key, not the secret key.** RLS is genuinely
+  enforced on the read path (public SELECT sees only `active`), which matches the
+  task's "RLS enforced" constraint. The secret key is reserved for the seed and
+  future trusted server actions (`lib/supabase/admin.ts`, `server-only`).
+- **DB types are hand-authored** (`lib/data/database.types.ts`) to match
+  `0001_init.sql`, since the Supabase CLI / DB connection isn't wired yet. They
+  can be regenerated with `supabase gen types typescript` later.

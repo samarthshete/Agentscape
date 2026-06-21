@@ -3,37 +3,63 @@
 > Updated at the end of every working session (operating rule).
 
 ## Current phase
-**Phase 0 — Skeleton.** Step 1 (scaffold + run locally) complete.
+**Phase 1 — Schema + DAL + one seeded agent.** Complete (pending your review).
 
 ## Done (this session)
-- Reset to a clean, minimal scaffold (fresh restart, by decision). Preserved the
-  binding docs `PLAN.md` and `DECISIONS.md`; wrote `CLAUDE.md` (working agreement
-  + canonical folder structure).
-- Initialized **Next.js (App Router) + TypeScript (strict) + Tailwind**. No
-  Supabase, no DAL, no auth, no deploy — those are later phases.
-- Created the canonical structure: `app/(public)`, `app/(dashboard)`,
-  `app/llms.txt/route.ts`, `lib/data`, `lib/render`, `lib/supabase`,
-  `db/migrations`, `db/seed`, `components`. Each `lib/` folder has a one-line
-  single-responsibility README.
-- Placeholder landing at `app/(public)/page.tsx` — RSC, `<h1>Agentscape</h1>` +
-  tagline, minimal Tailwind, zero client JS.
-- `/llms.txt` route handler returning a hardcoded placeholder (`text/plain`).
-- First git commit made on `main`.
+- **Supabase clients** (`lib/supabase/`): `client.ts` (browser, publishable key),
+  `server.ts` (server DAL reads, publishable key, RLS-enforced), `admin.ts`
+  (secret key, `server-only`-guarded, RLS-bypassing — seed/trusted writes only).
+- **Migration** `db/migrations/0001_init.sql`: `profiles`, `agents`, `posts`,
+  `follows`, `bookmarks`, `likes`; 4 enums; tsvector search columns (maintained
+  by triggers — see note); GIN indexes on search, btree on FKs + feed keys,
+  UNIQUE on `agents.slug` / `profiles.handle`; `updated_at` trigger; full RLS
+  (public SELECT on active agents/posts; owner-scoped writes; self-only
+  interactions). **Applied to the Supabase project.**
+- **Types** (`lib/data/database.types.ts` row types + `types.ts` domain types +
+  `mappers.ts`): shared DB ↔ DAL vocabulary, snake→camel mapping. No `any`.
+- **DAL** (`lib/data/index.ts`) — the only Postgres-touching code:
+  - `getAgentBySlug(slug): Promise<Agent | null>`
+  - `listAgents({limit?, offset?}): Promise<Agent[]>`
+  - `getFeed({limit?, offset?}): Promise<Post[]>`
+  - `searchAgents(query, {limit?, offset?}): Promise<Agent[]>`
+- **Seed** (`db/seed/seed.ts`, `npm run db:seed`): provisions one operator
+  (auth user + `profiles`), one agent (`atlas-research`), and two work-samples
+  (a `changelog` + a `benchmark` with structured `proof` payloads). Idempotent
+  via deterministic ids + upserts.
 
-## Verification (this session, on this machine)
+## Verification (this session)
+- `npm run db:seed` → seeds, then reads the agent back **through the DAL**
+  (`getAgentBySlug`, RLS-enforced publishable client) and prints the typed
+  object: correct `capabilities` array (4), `metrics` object, ISO `createdAt`.
+  Re-running yields the same row (idempotent, no duplication).
 - `npm run typecheck` → exit 0 (strict, no `any`).
-- `npm run build` → ✓ compiled; `/` and `/llms.txt` prerender as static.
-- `npm run dev` → `GET /` returns HTTP 200 with `<h1>Agentscape</h1>` + tagline
-  in raw HTML; `GET /llms.txt` returns HTTP 200, `content-type: text/plain`.
+- `npm run build` → ✓ compiled; `/` and `/llms.txt` prerender. `main` shippable.
 
-## Notes
-- The previous session's Phase 0+1 scaffold (Supabase clients, middleware, DAL,
-  migration, seed) was removed in this fresh restart, by decision. That code is
-  no longer on disk; Phase 1 will rebuild it under the new `db/` + `lib/`
-  structure when we get there.
-- Not yet done in Phase 0 (later steps, not this session): shadcn/ui + Framer
-  Motion, `.env.example`, Supabase/Google OAuth/Upstash provisioning, Vercel.
+## Decisions recorded (DECISIONS.md §9)
+- Human table named **`profiles`** (not `operators`); `posts.type` enum includes
+  `task_completed` + `note` per CLAUDE.md.
+- `profiles.id` → `auth.users(id)`; seed provisions an auth user so RLS by
+  `auth.uid()` is real.
+- DAL reads use the **publishable** key (RLS enforced); secret key reserved for
+  seed/trusted server actions.
+- DB types hand-authored to match the migration (regenerate via CLI later).
 
-## Next up (awaiting your go-ahead)
-- Continue Phase 0: shadcn/ui + Framer Motion, `.env.example`, infra
-  provisioning + first Vercel deploy. **Do not start Phase 1 until told.**
+## Notes / gotchas for next session
+- **tsvector via triggers, not generated columns.** A `STORED GENERATED` column
+  rejected the search expression as "not immutable"; a `BEFORE INSERT/UPDATE`
+  trigger maintains `search_vector` instead. Same column/index/DAL.
+- **Seed runs under `--conditions=react-server`** (wired into `npm run db:seed`)
+  so the `server-only` guard is a no-op in Node, exactly as in a Server Component.
+- **node_modules on this machine is flaky** — Next's `dist/compiled` files have
+  been dropped twice now, breaking `next build` with MODULE_NOT_FOUND. Fix is a
+  clean `rm -rf node_modules && npm install`. Not a code defect.
+
+## Next up (Phase 2 — the DE-RISK GATE) — awaiting your go-ahead
+- Render the seeded agent four ways: human HTML (RSC) + JSON-LD, markdown twin
+  (`text/markdown`), and live-data `/llms.txt`. Then the external-LLM round-trip.
+- **Do not start Phase 2 until told.**
+
+## Blocked / needs you
+- Nothing blocking Phase 1. For full migration automation later, a Postgres
+  connection string (`DATABASE_URL`) would let `psql`/CLI apply migrations
+  without the dashboard.
