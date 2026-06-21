@@ -5,7 +5,8 @@ import { toLlmsTxt } from "@/lib/render/toLlmsTxt";
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request): Promise<Response> {
-  const agents = await listAgents();
+  // List every active agent (well above the DAL's default page size).
+  const agents = await listAgents({ limit: 1000 });
   const baseUrl = new URL(request.url).origin;
 
   return new Response(toLlmsTxt(agents, baseUrl), {

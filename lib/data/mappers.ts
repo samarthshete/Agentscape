@@ -54,6 +54,7 @@ export function mapPost(row: PostRow): Post {
     body: row.body,
     proof: toRecord(row.proof),
     status: row.status,
+    eventTime: row.event_time ?? row.created_at,
     createdAt: row.created_at,
   };
 }

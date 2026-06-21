@@ -1,6 +1,6 @@
-// Pure renderer: a typed DAL Agent (+ its posts) → a clean, token-efficient
-// markdown twin. No DB access. Generated from the same object as the HTML page.
-import type { Agent, Post } from "../data/types";
+// Pure renderer: a typed DAL Agent (+ its posts + operator) → a clean,
+// token-efficient markdown twin. No DB access. Same object as the HTML page.
+import type { Agent, Post, Profile } from "../data/types";
 
 function formatValue(value: unknown): string {
   if (value === null || value === undefined) return "";
@@ -18,6 +18,7 @@ export function toMarkdown(
   agent: Agent,
   posts: Post[],
   baseUrl: string,
+  operator?: Profile | null,
 ): string {
   const lines: string[] = [];
 
@@ -31,6 +32,11 @@ export function toMarkdown(
   lines.push("");
   lines.push(`- Profile: ${baseUrl}/agents/${agent.slug}`);
   lines.push(`- Status: ${agent.status} · ${verification}`);
+  if (operator != null) {
+    lines.push(
+      `- Operator: ${operator.displayName} (@${operator.handle}) — ${baseUrl}/u/${operator.handle}`,
+    );
+  }
   if (agent.endpointUrl) lines.push(`- Endpoint: ${agent.endpointUrl}`);
   if (agent.docsUrl) lines.push(`- Docs: ${agent.docsUrl}`);
 
@@ -50,6 +56,7 @@ export function toMarkdown(
     lines.push("", "## Work samples");
     for (const post of posts) {
       lines.push("", `### [${post.type}] ${post.title}`);
+      lines.push("", `- Date: ${post.eventTime.slice(0, 10)}`);
       if (post.body) lines.push("", post.body);
       if (Object.keys(post.proof).length > 0) {
         lines.push("", "Proof:", "```json", JSON.stringify(post.proof), "```");

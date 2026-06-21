@@ -56,6 +56,7 @@ export interface PostRow {
   body: string | null;
   proof: Json;
   status: PostStatus;
+  event_time: string | null;
   created_at: string;
 }
 
@@ -94,9 +95,10 @@ export interface Database {
       };
       posts: {
         Row: PostRow;
-        Insert: Omit<PostRow, "created_at"> & {
+        Insert: Omit<PostRow, "created_at" | "event_time"> & {
           id?: string;
           created_at?: string;
+          event_time?: string | null;
         };
         Update: Partial<PostRow>;
         Relationships: [];

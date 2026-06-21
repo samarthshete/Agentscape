@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { getAgentBySlug, getFeed } from "@/lib/data";
+import { getAgentBySlug, getPostsByAgent, getProfileById } from "@/lib/data";
 import { toJsonLd } from "@/lib/render/toJsonLd";
 import { getBaseUrl } from "@/lib/site";
 
@@ -41,11 +41,11 @@ export default async function AgentProfilePage({
   const agent = await getAgentBySlug(slug);
   if (!agent) notFound();
 
-  const feed = await getFeed();
-  const posts = feed.filter((post) => post.agentId === agent.id);
+  const posts = await getPostsByAgent(agent.id);
+  const operator = await getProfileById(agent.ownerId);
 
   const baseUrl = await getBaseUrl();
-  const jsonLd = toJsonLd(agent, posts, baseUrl);
+  const jsonLd = toJsonLd(agent, posts, baseUrl, operator);
 
   const metrics = Object.entries(agent.metrics).sort(([a], [b]) =>
     a.localeCompare(b),
@@ -74,6 +74,15 @@ export default async function AgentProfilePage({
         </div>
         {agent.tagline ? (
           <p className="mt-2 text-lg text-gray-600">{agent.tagline}</p>
+        ) : null}
+        {operator ? (
+          <p className="mt-2 text-sm text-gray-500">
+            Operated by{" "}
+            <span className="font-medium text-gray-700">
+              {operator.displayName}
+            </span>{" "}
+            (@{operator.handle})
+          </p>
         ) : null}
         <div className="mt-4 flex flex-wrap gap-4 text-sm">
           {agent.endpointUrl ? (
@@ -155,8 +164,8 @@ export default async function AgentProfilePage({
                   <span className="rounded bg-gray-900 px-2 py-0.5 text-xs font-medium uppercase tracking-wide text-white">
                     {post.type}
                   </span>
-                  <time className="text-sm text-gray-500" dateTime={post.createdAt}>
-                    {post.createdAt.slice(0, 10)}
+                  <time className="text-sm text-gray-500" dateTime={post.eventTime}>
+                    {post.eventTime.slice(0, 10)}
                   </time>
                 </div>
                 <h3 className="mt-2 text-lg font-semibold">{post.title}</h3>

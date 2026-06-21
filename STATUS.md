@@ -3,8 +3,43 @@
 > Updated at the end of every working session (operating rule).
 
 ## Current phase
-**Phase 2 — One agent, four ways. DE-RISK GATE PASSED (2026-06-21).**
-Awaiting human go-ahead to start Phase 3.
+**Phase 3a — Full seed data + complete DAL. Complete (pending your review).**
+Phase 2 de-risk gate: **PASSED (2026-06-21)** — recorded below.
+Next is **3b** (feed/directory/search UI) — not started; awaiting your verification.
+
+## Phase 3a — Done
+- **DAL** (`lib/data`): added `getPostsByAgent(agentId,{limit?,offset?})` (replaces
+  the Phase-2 `getFeed`-filter workaround), `getProfileByHandle`, `getProfileById`.
+  `getFeed`/`getPostsByAgent` now order by `event_time` desc. Kept
+  `listAgents`/`getFeed`/`searchAgents`. DAL remains the only DB access.
+- **Schema** `db/migrations/0002_add_post_event_time.sql` (additive, idempotent):
+  `posts.event_time timestamptz` + index. Applied to Supabase.
+- **Renderers**: `toJsonLd` now includes the operator as `author`/`Person` (the
+  Phase-2 deferral) and uses `event_time` for `datePublished`; `toMarkdown` adds
+  an operator line + per-post date; profile page shows the operator and displays
+  `event_time` (not `created_at`). Renderers stay pure.
+- **/llms.txt** lists ALL active agents via `listAgents({limit:1000})`.
+- **Seed** (`db/seed/seed.ts`, idempotent full reseed): 8 operators, **20 agents**
+  across research/devtools/data/infra-security/content/design/finance/support, a
+  mix of verified/unverified, **31 work-samples** with structured proof + event
+  times. Fixed the Phase-2 `example.org` proof link to a branded URL.
+
+## Phase 3a — Verification (this session)
+- `npm run db:seed` → 8 operators, 20 agents, 31 posts; DAL read-backs:
+  - `listAgents({limit:1000})` → 20 active agents.
+  - `searchAgents("sql")` → migrate-mate, queryweaver; `searchAgents("incident
+    response")` → sentinel-ops (sensible hits).
+  - `getPostsByAgent(atlas)` → 2 posts, all scoped to atlas.
+  - `getProfileByHandle("lumen-labs")` → Lumen Labs.
+- `curl /llms.txt` → 20 agent entries, each with a markdown link.
+- Spot-check `queryweaver`: profile (HTML, shows operator), JSON-LD
+  (`author` Person + `datePublished` from event_time), markdown twin (operator
+  line + per-post dates). All HTTP 200.
+- `npm run typecheck` exit 0; `npm run build` exit 0.
+
+## NOT in 3a (deliberately deferred to 3b)
+- No human list-view UI yet: landing/feed/directory `/agents`/search/`/u/[handle]`.
+  The operator `/u/[handle]` links in JSON-LD/markdown point at pages 3b will add.
 
 ## De-risk gate result (2026-06-21) — PASSED
 Run by the human against production (https://agentscape-kappa.vercel.app) with
@@ -118,12 +153,13 @@ two independent LLMs, **Gemini** and **ChatGPT**, in fresh sessions.
   been dropped twice now, breaking `next build` with MODULE_NOT_FOUND. Fix is a
   clean `rm -rf node_modules && npm install`. Not a code defect.
 
-## Next up (Phase 3) — only after the gate passes
-- Seed 15–25 coherent agents + work-samples; landing page, public feed,
-  directory `/agents`, operator pages, `tsvector` search, sitemap/robots.
-- **Do not start Phase 3 until the human confirms the de-risk gate passed.**
+## Next up (Phase 3b) — after you verify the 3a data
+- Human list-view UI over the now-populated data: landing page, public feed,
+  directory `/agents` (filter by capability, paginated), operator pages
+  `/u/[handle]`, search results page over `tsvector`, post cards; sitemap/robots.
+- **Do not start 3b until you confirm the seed data looks right.**
 
 ## Blocked / needs you
-- **The external-LLM de-risk gate** (above) — you run it against production.
+- Your review of the 3a seed data (live: https://agentscape-kappa.vercel.app).
 - For full migration automation later, a Postgres connection string
   (`DATABASE_URL`) would let `psql`/CLI apply migrations without the dashboard.

@@ -48,5 +48,8 @@ export interface Post {
   body: string | null;
   proof: PostProof;
   status: PostStatus;
+  // When the work-sample event actually happened (launch/benchmark/changelog/
+  // task). Falls back to createdAt if unset. Use this for display + ordering.
+  eventTime: string;
   createdAt: string;
 }

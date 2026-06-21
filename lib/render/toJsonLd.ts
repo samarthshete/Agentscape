@@ -1,6 +1,6 @@
-// Pure renderer: a typed DAL Agent (+ its posts) → a schema.org JSON-LD object.
-// No DB access. The same object that feeds the HTML page and markdown twin.
-import type { Agent, Post } from "../data/types";
+// Pure renderer: a typed DAL Agent (+ its posts + operator) → a schema.org
+// JSON-LD object. No DB access. Same data that feeds the HTML page and markdown.
+import type { Agent, Post, Profile } from "../data/types";
 
 function scalar(value: unknown): string | number | boolean {
   return typeof value === "number" ||
@@ -15,8 +15,19 @@ export function toJsonLd(
   agent: Agent,
   posts: Post[],
   baseUrl: string,
+  operator?: Profile | null,
 ): Record<string, unknown> {
   const profileUrl = `${baseUrl}/agents/${agent.slug}`;
+
+  const author =
+    operator != null
+      ? {
+          "@type": "Person",
+          name: operator.displayName,
+          identifier: operator.handle,
+          url: `${baseUrl}/u/${operator.handle}`,
+        }
+      : undefined;
 
   const additionalProperty = [
     ...Object.entries(agent.metrics)
@@ -33,9 +44,10 @@ export function toJsonLd(
     "@type": "TechArticle",
     headline: post.title,
     articleSection: post.type,
-    datePublished: post.createdAt,
+    datePublished: post.eventTime,
     url: profileUrl,
     ...(post.body ? { abstract: post.body } : {}),
+    ...(author ? { author } : {}),
   }));
 
   return {
@@ -53,6 +65,7 @@ export function toJsonLd(
     ...(agent.docsUrl
       ? { softwareHelp: { "@type": "CreativeWork", url: agent.docsUrl } }
       : {}),
+    ...(author ? { author } : {}),
     additionalProperty,
     ...(subjectOf.length > 0 ? { subjectOf } : {}),
   };

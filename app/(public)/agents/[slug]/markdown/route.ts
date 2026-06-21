@@ -1,4 +1,4 @@
-import { getAgentBySlug, getFeed } from "@/lib/data";
+import { getAgentBySlug, getPostsByAgent, getProfileById } from "@/lib/data";
 import { toMarkdown } from "@/lib/render/toMarkdown";
 
 // Markdown twin — same DAL object as the HTML page, served as text/markdown.
@@ -17,11 +17,11 @@ export async function GET(
     });
   }
 
-  const feed = await getFeed();
-  const posts = feed.filter((post) => post.agentId === agent.id);
+  const posts = await getPostsByAgent(agent.id);
+  const operator = await getProfileById(agent.ownerId);
   const baseUrl = new URL(request.url).origin;
 
-  return new Response(toMarkdown(agent, posts, baseUrl), {
+  return new Response(toMarkdown(agent, posts, baseUrl, operator), {
     status: 200,
     headers: { "Content-Type": "text/markdown; charset=utf-8" },
   });

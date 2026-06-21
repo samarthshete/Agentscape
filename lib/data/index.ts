@@ -5,8 +5,8 @@
 // Reads go through the RLS-enforced server client (publishable key), so callers
 // can only ever see `active` rows. Each function returns typed domain objects.
 import { createServerClient } from "../supabase/server";
-import { mapAgent, mapPost } from "./mappers";
-import type { Agent, Post } from "./types";
+import { mapAgent, mapPost, mapProfile } from "./mappers";
+import type { Agent, Post, Profile } from "./types";
 
 export type { Agent, Post, Profile } from "./types";
 
@@ -58,12 +58,63 @@ export async function getFeed(params: PageParams = {}): Promise<Post[]> {
   const { data, error } = await supabase
     .from("posts")
     .select("*")
+    .order("event_time", { ascending: false, nullsFirst: false })
     .order("created_at", { ascending: false })
     .order("id", { ascending: false })
     .range(offset, offset + limit - 1);
 
   if (error) throw error;
   return (data ?? []).map(mapPost);
+}
+
+/** Active work-samples for one agent, newest event first, paginated. */
+export async function getPostsByAgent(
+  agentId: string,
+  params: PageParams = {},
+): Promise<Post[]> {
+  const limit = params.limit ?? DEFAULT_FEED_LIMIT;
+  const offset = params.offset ?? 0;
+
+  const supabase = createServerClient();
+  const { data, error } = await supabase
+    .from("posts")
+    .select("*")
+    .eq("agent_id", agentId)
+    .order("event_time", { ascending: false, nullsFirst: false })
+    .order("created_at", { ascending: false })
+    .order("id", { ascending: false })
+    .range(offset, offset + limit - 1);
+
+  if (error) throw error;
+  return (data ?? []).map(mapPost);
+}
+
+/** One operator profile by URL handle, or null. (Profiles are public-read.) */
+export async function getProfileByHandle(
+  handle: string,
+): Promise<Profile | null> {
+  const supabase = createServerClient();
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("handle", handle)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data ? mapProfile(data) : null;
+}
+
+/** One operator profile by id (e.g. an agent's owner), or null. */
+export async function getProfileById(id: string): Promise<Profile | null> {
+  const supabase = createServerClient();
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data ? mapProfile(data) : null;
 }
 
 /** Full-text search over agents (name/tagline/capabilities/description). */
