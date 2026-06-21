@@ -7,6 +7,19 @@
 Phase 2 de-risk gate: **PASSED (2026-06-21)** — recorded below.
 Next is **3b** (feed/directory/search UI) — not started; awaiting your verification.
 
+## Phase 3a — freshness fix (2026-06-21)
+- **Reported:** production `/llms.txt` appeared to show 1 agent while the DB had
+  20. **Finding:** the route was already `force-dynamic` (since Phase 2) and
+  production was in fact serving all 20 — the "1 agent" was the pre-3a-seed
+  state briefly served from an edge node, not a build-time freeze.
+- **Hardening:** added explicit `Cache-Control: no-store` to `/llms.txt` so no
+  CDN/proxy can ever serve a frozen machine index (its prior
+  `public, max-age=0, must-revalidate` technically permitted shared-cache
+  storage). Entity routes (`/agents/[slug]`, `/markdown`) confirmed live.
+- **Policy recorded in DECISIONS.md §12:** every DB-listing route must be
+  `force-dynamic` (machine index also `no-store`); never `force-static` on a
+  DB-backed route. 3b's feed/directory/search inherit this.
+
 ## Phase 3a — Done
 - **DAL** (`lib/data`): added `getPostsByAgent(agentId,{limit?,offset?})` (replaces
   the Phase-2 `getFeed`-filter workaround), `getProfileByHandle`, `getProfileById`.

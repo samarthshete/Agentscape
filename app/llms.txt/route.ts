@@ -1,7 +1,9 @@
 import { listAgents } from "@/lib/data";
 import { toLlmsTxt } from "@/lib/render/toLlmsTxt";
 
-// Generated from LIVE data: lists every active agent + its markdown twin.
+// The machine index MUST always reflect live data. `force-dynamic` renders it
+// per request (never a build-time snapshot); the explicit `no-store` guarantees
+// no CDN/proxy can serve a frozen copy. See DECISIONS.md §12.
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request): Promise<Response> {
@@ -11,6 +13,9 @@ export async function GET(request: Request): Promise<Response> {
 
   return new Response(toLlmsTxt(agents, baseUrl), {
     status: 200,
-    headers: { "Content-Type": "text/plain; charset=utf-8" },
+    headers: {
+      "Content-Type": "text/plain; charset=utf-8",
+      "Cache-Control": "no-store",
+    },
   });
 }

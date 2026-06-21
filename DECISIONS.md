@@ -236,3 +236,26 @@ Polish and verification *depth* compress first if time runs short. These five do
   markdown `<link rel="alternate">` IS in `<head>` via the Metadata API.
 - **Absolute URLs** come from the request origin (`getBaseUrl()` via headers on
   the page; `new URL(request.url).origin` in route handlers) — no hardcoded host.
+
+---
+
+## 12. Rendering & freshness policy (binding for all DB-backed routes)
+
+Machine surfaces and any view that lists/aggregates DB data **must reflect live
+data** — never a build-time snapshot. The bug this prevents: `/llms.txt` once
+appeared to show 1 agent while the DB held 20 (it was actually the pre-seed
+state, but a statically-rendered route *would* have frozen it). Rules:
+
+- **Any route that lists or aggregates DB rows** (`/llms.txt` today; the feed,
+  `/agents` directory, and search results in 3b) → `export const dynamic =
+  "force-dynamic"`. The machine index (`/llms.txt`) additionally sets
+  `Cache-Control: no-store` so no CDN/proxy can serve a frozen copy.
+- **Individual entity routes** (`/agents/[slug]` page + `/markdown` twin) →
+  already `force-dynamic`; they render live per request.
+- **Never use `force-static`** on a route that reads the DB. (The Phase-0
+  `/llms.txt` stub used it because it had no DB; that's the only legitimate case.)
+- A **short `revalidate`** (ISR) is acceptable only for expensive, non-index
+  pages where a few seconds of staleness is harmless — not for `/llms.txt` or
+  search. When in doubt, prefer `force-dynamic`.
+- Reads still flow exclusively through `lib/data` (the DAL); this policy governs
+  only *when* routes re-render, not *how* they query.
