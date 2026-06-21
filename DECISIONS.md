@@ -202,3 +202,13 @@ Polish and verification *depth* compress first if time runs short. These five do
 - **DB types are hand-authored** (`lib/data/database.types.ts`) to match
   `0001_init.sql`, since the Supabase CLI / DB connection isn't wired yet. They
   can be regenerated with `supabase gen types typescript` later.
+
+---
+
+## 10. Security log
+
+- **2026-06-21 — Next.js 15.0.3 → 15.0.5.** Patches **CVE-2025-66478** (reported
+  critical RCE in React Server Components / App Router). Minimal in-line patch
+  bump; exact-pinned in `package.json`. `typecheck` + `build` pass on 15.0.5.
+  (Advisory details were taken from the task instruction, not independently
+  verified here.)

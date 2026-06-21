@@ -5,6 +5,11 @@
 ## Current phase
 **Phase 1 — Schema + DAL + one seeded agent.** Complete (pending your review).
 
+## Security patches
+- **2026-06-21 — Next.js 15.0.3 → 15.0.5** (exact-pinned), patching
+  **CVE-2025-66478** (reported critical RCE in RSC / App Router). Standalone
+  commit; `typecheck` + `build` pass on 15.0.5. See DECISIONS.md §10.
+
 ## Done (this session)
 - **Supabase clients** (`lib/supabase/`): `client.ts` (browser, publishable key),
   `server.ts` (server DAL reads, publishable key, RLS-enforced), `admin.ts`
