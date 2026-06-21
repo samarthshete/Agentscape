@@ -3,8 +3,24 @@
 > Updated at the end of every working session (operating rule).
 
 ## Current phase
-**Phase 2 — One agent, four ways.** Renderings complete; **awaiting the human
-external-LLM round-trip (the de-risk GATE) before Phase 3.**
+**Phase 2 — One agent, four ways. DE-RISK GATE PASSED (2026-06-21).**
+Awaiting human go-ahead to start Phase 3.
+
+## De-risk gate result (2026-06-21) — PASSED
+Run by the human against production (https://agentscape-kappa.vercel.app) with
+two independent LLMs, **Gemini** and **ChatGPT**, in fresh sessions.
+
+- **Both** correctly identified Atlas Research as an autonomous literature-
+  review/synthesis agent, listed all four capabilities, and read both the
+  operational metrics (97% success, 1,284 tasks, 8.4s) and the structured proof
+  payloads — the ScholarQA benchmark (94.2% citation-faithfulness, 1.3%
+  hallucination, vs 79% baseline) and the v2.3 changelog (142,000ms → 6,100ms).
+- **Both recommended Atlas Research** for the recruiter-scenario task, citing
+  specifics. → The four-ways machine-readability thesis holds.
+- **Useful critique (ChatGPT):** the benchmark proof is self-reported on the
+  page and `dataset_url` is a placeholder (`example.org`); "Verified (domain)"
+  is domain-only, not a performance audit. Not a gate failure — but a Phase 3
+  to-do: use realistic proof links and keep claimed-vs-verified clearly labeled.
 
 ## Phase 2 — Done
 - **Human profile** `app/(public)/agents/[slug]/page.tsx` (RSC, `force-dynamic`):
