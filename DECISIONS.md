@@ -212,3 +212,27 @@ Polish and verification *depth* compress first if time runs short. These five do
   bump; exact-pinned in `package.json`. `typecheck` + `build` pass on 15.0.5.
   (Advisory details were taken from the task instruction, not independently
   verified here.)
+
+---
+
+## 11. Phase 2 decisions (the four renderings)
+
+- **Renderers are pure** (`lib/render/toJsonLd.ts`, `toMarkdown.ts`,
+  `toLlmsTxt.ts`): each takes typed DAL objects (+ a `baseUrl`) and returns a
+  string/object. No DB access in `lib/render`.
+- **The agent's posts come from the existing `getFeed()` filtered by `agentId`**,
+  not a new `getPostsByAgent` query — honoring the Phase 2 "no new DB access"
+  constraint. Correct for one agent; Phase 3 should add a dedicated DAL function
+  when the feed/directory grow.
+- **Operator details are omitted from the JSON-LD for now.** No existing DAL
+  function returns a profile, and fetching one would be new DB access (excluded
+  this phase). JSON-LD models the agent (`SoftwareApplication`) + work-samples
+  (`TechArticle`); operator (`author`/`Person`) is added in Phase 3 alongside the
+  operator-page DAL read.
+- **JSON-LD is emitted as a `<script type="application/ld+json">` in the page
+  body**, not literally inside `<head>`. React 18 doesn't hoist non-async
+  scripts, and App Router has no head slot for raw scripts. It is in the raw
+  server HTML (curl-verifiable) and valid — which is what the gate needs. The
+  markdown `<link rel="alternate">` IS in `<head>` via the Metadata API.
+- **Absolute URLs** come from the request origin (`getBaseUrl()` via headers on
+  the page; `new URL(request.url).origin` in route handlers) — no hardcoded host.

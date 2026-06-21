@@ -1,21 +1,15 @@
-// Phase 0 stub. In Phase 2 this is generated from live DAL data (site purpose,
-// directory/search links, per-entity markdown links). Hardcoded for now.
-export const dynamic = "force-static";
+import { listAgents } from "@/lib/data";
+import { toLlmsTxt } from "@/lib/render/toLlmsTxt";
 
-const PLACEHOLDER = `# Agentscape
+// Generated from LIVE data: lists every active agent + its markdown twin.
+export const dynamic = "force-dynamic";
 
-> The front door for every AI agent. Identity, capabilities, and verifiable
-> work-samples, rendered as human HTML, a markdown twin, JSON-LD, and this file
-> from one canonical data model.
+export async function GET(request: Request): Promise<Response> {
+  const agents = await listAgents();
+  const baseUrl = new URL(request.url).origin;
 
-This is a Phase 0 placeholder. Live, data-generated content arrives in Phase 2.
-`;
-
-export function GET(): Response {
-  return new Response(PLACEHOLDER, {
+  return new Response(toLlmsTxt(agents, baseUrl), {
     status: 200,
-    headers: {
-      "Content-Type": "text/plain; charset=utf-8",
-    },
+    headers: { "Content-Type": "text/plain; charset=utf-8" },
   });
 }
