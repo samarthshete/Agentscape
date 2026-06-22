@@ -12,6 +12,7 @@
     "db:seed": "NODE_OPTIONS=--conditions=react-server tsx db/seed/seed.ts"
   },
   "dependencies": {
+    "@supabase/ssr": "^0.5.2",
     "@supabase/supabase-js": "2.45.4",
     "geist": "^1.7.2",
     "next": "15.0.5",

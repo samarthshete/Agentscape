@@ -9,13 +9,7 @@ config({ path: ".env.local" });
 
 import { createAdminClient } from "../../lib/supabase/admin";
 import type { Json } from "../../lib/data/database.types";
-import {
-  getAgentBySlug,
-  getPostsByAgent,
-  getProfileByHandle,
-  listAgents,
-  searchAgents,
-} from "../../lib/data";
+import { mapAgent, mapPost, mapProfile } from "../../lib/data/mappers";
 
 type AdminClient = ReturnType<typeof createAdminClient>;
 
@@ -996,43 +990,58 @@ async function main(): Promise<void> {
 
   console.log(`Inserted ${agentRows.length} agents and ${postRows.length} posts.`);
 
-  await verify();
+  await verify(admin);
 }
 
-async function verify(): Promise<void> {
-  console.log("\n===== VERIFY (through the DAL) =====");
+// Read the seeded rows back (via the admin client + the same row→domain mappers
+// the DAL uses) to confirm shape. The RLS-scoped read path is exercised by the
+// running app; the seed is a Node script, so it can't use the cookie-aware DAL.
+async function verify(admin: AdminClient): Promise<void> {
+  console.log("\n===== VERIFY (admin read-back + DAL mappers) =====");
 
-  const agents = await listAgents({ limit: 1000 });
-  console.log(`\nlistAgents → ${agents.length} active agents`);
+  const { data: agentRows, error: aErr } = await admin
+    .from("agents")
+    .select("*")
+    .eq("status", "active");
+  if (aErr) throw aErr;
+  const agents = (agentRows ?? []).map(mapAgent);
+  console.log(`\nactive agents → ${agents.length}`);
   console.log("  sample:", agents.slice(0, 5).map((a) => a.slug).join(", "), "…");
 
-  for (const query of ["sql", "incident response"]) {
-    const hits = await searchAgents(query);
-    console.log(
-      `\nsearchAgents("${query}") → ${hits.length} hits:`,
-      hits.map((a) => a.slug).join(", ") || "(none)",
-    );
-  }
+  const { data: atlasRow } = await admin
+    .from("agents")
+    .select("*")
+    .eq("slug", "atlas-research")
+    .maybeSingle();
+  if (!atlasRow) throw new Error("VERIFY FAILED: atlas-research not found");
+  const atlas = mapAgent(atlasRow);
 
-  const atlas = await getAgentBySlug("atlas-research");
-  if (!atlas) throw new Error("VERIFY FAILED: atlas-research not found");
-  const atlasPosts = await getPostsByAgent(atlas.id);
-  console.log(
-    `\ngetPostsByAgent(atlas-research) → ${atlasPosts.length} posts:`,
-    atlasPosts.map((p) => `[${p.type}] ${p.eventTime.slice(0, 10)}`).join(" | "),
-  );
+  const { data: postRows } = await admin
+    .from("posts")
+    .select("*")
+    .eq("agent_id", atlas.id);
+  const atlasPosts = (postRows ?? []).map(mapPost);
   const sameAgent = atlasPosts.every((p) => p.agentId === atlas.id);
-  console.log("  all posts belong to atlas:", sameAgent);
-
-  const op = await getProfileByHandle("lumen-labs");
   console.log(
-    `\ngetProfileByHandle("lumen-labs") → ${op ? `${op.displayName} (@${op.handle})` : "null"}`,
+    `\natlas posts → ${atlasPosts.length}:`,
+    atlasPosts.map((p) => `[${p.type}] ${p.eventTime.slice(0, 10)}`).join(" | "),
+    `| all belong to atlas: ${sameAgent}`,
+  );
+
+  const { data: opRow } = await admin
+    .from("profiles")
+    .select("*")
+    .eq("handle", "lumen-labs")
+    .maybeSingle();
+  const op = opRow ? mapProfile(opRow) : null;
+  console.log(
+    `\noperator lumen-labs → ${op ? `${op.displayName} (@${op.handle})` : "null"}`,
   );
 
   if (!op || !sameAgent || agents.length < 15) {
-    throw new Error("VERIFY FAILED: unexpected DAL results");
+    throw new Error("VERIFY FAILED: unexpected results");
   }
-  console.log("\nOK — seed + DAL reads verified.");
+  console.log("\nOK — seed verified.");
 }
 
 main().catch((err: unknown) => {

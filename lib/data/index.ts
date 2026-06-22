@@ -28,7 +28,7 @@ const DEFAULT_SEARCH_LIMIT = 20;
 
 /** One agent by its stable slug, or null if it isn't a publicly-visible agent. */
 export async function getAgentBySlug(slug: string): Promise<Agent | null> {
-  const supabase = createServerClient();
+  const supabase = await createServerClient();
   const { data, error } = await supabase
     .from("agents")
     .select("*")
@@ -44,7 +44,7 @@ export async function listAgents(params: PageParams = {}): Promise<Agent[]> {
   const limit = params.limit ?? DEFAULT_LIST_LIMIT;
   const offset = params.offset ?? 0;
 
-  const supabase = createServerClient();
+  const supabase = await createServerClient();
   const { data, error } = await supabase
     .from("agents")
     .select("*")
@@ -61,7 +61,7 @@ export async function getFeed(params: PageParams = {}): Promise<Post[]> {
   const limit = params.limit ?? DEFAULT_FEED_LIMIT;
   const offset = params.offset ?? 0;
 
-  const supabase = createServerClient();
+  const supabase = await createServerClient();
   const { data, error } = await supabase
     .from("posts")
     .select("*")
@@ -82,7 +82,7 @@ export async function getPostsByAgent(
   const limit = params.limit ?? DEFAULT_FEED_LIMIT;
   const offset = params.offset ?? 0;
 
-  const supabase = createServerClient();
+  const supabase = await createServerClient();
   const { data, error } = await supabase
     .from("posts")
     .select("*")
@@ -100,7 +100,7 @@ export async function getPostsByAgent(
 export async function getProfileByHandle(
   handle: string,
 ): Promise<Profile | null> {
-  const supabase = createServerClient();
+  const supabase = await createServerClient();
   const { data, error } = await supabase
     .from("profiles")
     .select("*")
@@ -113,7 +113,7 @@ export async function getProfileByHandle(
 
 /** One operator profile by id (e.g. an agent's owner), or null. */
 export async function getProfileById(id: string): Promise<Profile | null> {
-  const supabase = createServerClient();
+  const supabase = await createServerClient();
   const { data, error } = await supabase
     .from("profiles")
     .select("*")
@@ -135,7 +135,7 @@ export async function searchAgents(
   const limit = params.limit ?? DEFAULT_SEARCH_LIMIT;
   const offset = params.offset ?? 0;
 
-  const supabase = createServerClient();
+  const supabase = await createServerClient();
   const { data, error } = await supabase
     .from("agents")
     .select("*")
@@ -161,7 +161,7 @@ export async function searchPosts(
   const limit = params.limit ?? DEFAULT_SEARCH_LIMIT;
   const offset = params.offset ?? 0;
 
-  const supabase = createServerClient();
+  const supabase = await createServerClient();
   const { data, error } = await supabase
     .from("posts")
     .select("*")
@@ -184,7 +184,7 @@ export async function listAgentsByOwner(
   const limit = params.limit ?? DEFAULT_LIST_LIMIT;
   const offset = params.offset ?? 0;
 
-  const supabase = createServerClient();
+  const supabase = await createServerClient();
   const { data, error } = await supabase
     .from("agents")
     .select("*")
@@ -202,7 +202,7 @@ export async function listProfiles(params: PageParams = {}): Promise<Profile[]> 
   const limit = params.limit ?? DEFAULT_LIST_LIMIT;
   const offset = params.offset ?? 0;
 
-  const supabase = createServerClient();
+  const supabase = await createServerClient();
   const { data, error } = await supabase
     .from("profiles")
     .select("*")

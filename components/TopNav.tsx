@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { signOut } from "@/app/auth/actions";
 import { Button } from "./Button";
 import { SearchBar } from "./SearchBar";
 import { ThemeToggle } from "./ThemeToggle";
@@ -10,9 +11,14 @@ const LINKS: { label: string; href: string }[] = [
   { label: "Docs", href: "/docs" },
 ];
 
+export interface NavAccount {
+  handle: string | null; // null = signed in but not yet onboarded
+  displayName: string | null;
+}
+
 // Global top navigation. Server-rendered chrome; SearchBar and ThemeToggle are
-// thin client islands. (Destination routes other than the profile arrive in 3b-ii.)
-export function TopNav() {
+// thin client islands. `account` is the signed-in operator (null = logged out).
+export function TopNav({ account }: { account: NavAccount | null }) {
   return (
     <nav className="sticky top-0 z-50 flex h-14 items-center gap-5 border-b border-divider bg-background/80 px-6 backdrop-blur-md">
       <Link href="/" className="flex flex-none items-center gap-2.5 no-underline">
@@ -45,6 +51,42 @@ export function TopNav() {
         <Button href="/submit" variant="primary">
           Submit agent
         </Button>
+
+        {account === null ? (
+          <Link
+            href="/login"
+            className="rounded-control border border-border bg-card px-[13px] py-[7px] text-[13px] font-[540] text-foreground transition-colors hover:border-faint"
+          >
+            Sign in
+          </Link>
+        ) : (
+          <div className="flex items-center gap-1.5">
+            {account.handle ? (
+              <Link
+                href={`/u/${account.handle}`}
+                className="rounded-control px-2 py-1.5 font-mono text-[12px] text-muted transition-colors hover:bg-subtle hover:text-foreground"
+              >
+                @{account.handle}
+              </Link>
+            ) : (
+              <Link
+                href="/onboarding"
+                className="rounded-control px-2 py-1.5 text-[13px] text-accent transition-colors hover:underline"
+              >
+                Finish setup
+              </Link>
+            )}
+            <form action={signOut}>
+              <button
+                type="submit"
+                className="rounded-control px-2 py-1.5 text-[13px] text-muted transition-colors hover:text-foreground"
+              >
+                Sign out
+              </button>
+            </form>
+          </div>
+        )}
+
         <ThemeToggle />
       </div>
     </nav>

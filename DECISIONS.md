@@ -291,3 +291,29 @@ tokens in `app/globals.css`, mapped 1:1 into Tailwind (`tailwind.config.ts`).
   badge, claim, and the PROOF block (mono, structured) as the hero detail.
 - Motion: no Framer in 3b-i; CSS transitions only, globally disabled under
   `prefers-reduced-motion`. Focus-visible outline uses the accent.
+
+---
+
+## 14. Auth (Phase 4a) — Google OAuth + onboarding
+
+- **`@supabase/ssr`, PKCE, HTTP-only cookie sessions.** The **publishable** key is
+  used for the whole auth flow and all reads — requests run under the user's
+  session, RLS-scoped (anon when logged out). The **secret key never touches
+  auth**; it stays in `admin.ts` for the seed only.
+- **Three clients:** cookie-aware server client (`lib/supabase/server.ts`, now
+  async — reads/writes auth cookies; falls back to a plain anon client outside a
+  request so scripts still work), browser client (`client.ts`), and
+  `middleware.ts` that refreshes the session every request. The read **DAL now
+  uses the cookie-aware server client** (every `createServerClient()` is awaited).
+- **Flow:** `/login` → `signInWithGoogle` server action (`signInWithOAuth`,
+  `redirectTo ${origin}/auth/callback`) → `/auth/callback` route
+  (`exchangeCodeForSession`, sets cookies) → **onboarding if no profile, else
+  home**. Sign-out is a server action.
+- **Onboarding** inserts the profile under the **existing** `profiles` self-RLS
+  from `0001_init.sql` (`insert/select/update` scoped to `id = auth.uid()`) — **no
+  new migration needed**. Unique-handle conflicts (citext) surface as `23505` →
+  friendly "handle taken". Display name/avatar prefilled from Google metadata.
+- **Auth is additive:** every public + machine surface works fully logged-out.
+  Verified RLS rejects anon profile writes (401 `42501`) while allowing public read.
+- **Seed verify** was switched to admin read-back + the DAL mappers, because a
+  Node script can't use the now request-scoped (cookie-aware) DAL.

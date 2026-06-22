@@ -3,8 +3,35 @@
 > Updated at the end of every working session (operating rule).
 
 ## Current phase
-**Phase 3b-ii — Human list views. Complete (pending your review).**
+**Phase 4a — Auth + onboarding. Complete (pending your production sign-in test).**
 Phase 2 de-risk gate: **PASSED (2026-06-21)**.
+
+## Phase 4a — Done (Google OAuth + onboarding via @supabase/ssr)
+- **Prereq gate passed:** confirmed Google provider enabled in Supabase
+  (`/auth/v1/settings` → `google: true`) before building.
+- **Cookie-aware clients:** `lib/supabase/server.ts` (async, PKCE cookie session,
+  publishable key; anon fallback for scripts), `client.ts` (browser),
+  `lib/supabase/middleware.ts` + root `middleware.ts` (per-request session
+  refresh). Read DAL now awaits the cookie-aware server client. Secret key stays
+  seed-only — never in the auth flow.
+- **Sign-in:** `/login` + `signInWithGoogle` server action → `/auth/callback`
+  (`exchangeCodeForSession`, sets cookies) → onboarding if no profile, else home.
+  Sign-out server action.
+- **Onboarding** `/onboarding`: signed-in + no profile → collects unique handle +
+  display name, inserts under the existing `profiles` self-RLS (no new migration);
+  `23505` → friendly "handle taken"; name/avatar prefilled from Google.
+- **Nav** shows account state (@handle / "Finish setup" + Sign out) when logged in,
+  "Sign in" when logged out. `/submit` stays a placeholder.
+
+## Phase 4a — Verification
+- Logged-out: /, /agents, /feed, /u/[handle] all 200 with content; nav shows
+  "Sign in"; /llms.txt still 20; markdown twin 200. Auth is additive.
+- /login renders "Continue with Google"; /onboarding (no session) → 307 /login;
+  /auth/callback (no code) → 307 /login?error=missing_code.
+- **RLS proven:** anon SELECT profiles works; anon INSERT → 401 `42501` (RLS
+  reject); anon UPDATE other profile → 0 rows; target bio unchanged.
+- `typecheck` + `build` clean; middleware compiled.
+- **PENDING (manual, production):** a real Google sign-in end-to-end — yours to run.
 
 ## Phase 3b-ii — Done (reusing the 3b-i component library)
 - **Landing `/`** — thesis hero, what-it-is, featured agents (real `listAgents`),

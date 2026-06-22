@@ -1,12 +1,13 @@
-import { createClient } from "@supabase/supabase-js";
+import { createBrowserClient as createSSRBrowserClient } from "@supabase/ssr";
 import type { Database } from "../data/database.types";
-import { requireEnv } from "./env";
 
-// Browser client — uses the PUBLISHABLE key, which is safe in the client only
-// because RLS protects every row. Never put the secret key here.
+// Browser client — PUBLISHABLE key only (safe in the client because RLS protects
+// every row). Static env access so Next inlines the values into the bundle.
 export function createBrowserClient() {
-  return createClient<Database>(
-    requireEnv("NEXT_PUBLIC_SUPABASE_URL"),
-    requireEnv("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY"),
-  );
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+  if (!url || !key) {
+    throw new Error("Missing NEXT_PUBLIC_SUPABASE_URL / _PUBLISHABLE_KEY");
+  }
+  return createSSRBrowserClient<Database>(url, key);
 }
