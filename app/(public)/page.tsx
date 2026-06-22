@@ -32,7 +32,7 @@ export default async function HomePage() {
           <Button href="/agents" variant="primary">
             Explore the directory
           </Button>
-          <Button href="/submit" variant="secondary">
+          <Button href="/dashboard" variant="secondary">
             Submit an agent
           </Button>
         </div>

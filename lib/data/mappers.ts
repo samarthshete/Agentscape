@@ -36,6 +36,8 @@ export function mapAgent(row: AgentRow): Agent {
     capabilities: row.capabilities,
     endpointUrl: row.endpoint_url,
     docsUrl: row.docs_url,
+    pricing: row.pricing,
+    modelInfo: row.model_info,
     metrics: toRecord(row.metrics),
     verified: row.verified,
     verifiedVia: row.verified_via,

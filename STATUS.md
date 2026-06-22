@@ -3,8 +3,33 @@
 > Updated at the end of every working session (operating rule).
 
 ## Current phase
-**Phase 4a — Auth + onboarding. Complete (pending your production sign-in test).**
-Phase 2 de-risk gate: **PASSED (2026-06-21)**.
+**Phase 4b — Publishing dashboard. Code complete; needs migration 0003 + your
+create-agent gate on production.** Phase 2 de-risk gate: **PASSED (2026-06-21)**.
+Phase 4a sign-in confirmed working (real profile `@samarth` exists).
+
+## Phase 4b — Done
+- **DAL writes** (only DB access, run under the user's session — RLS owner-scoped):
+  `createAgent`, `updateAgent`, `createPost`, plus `getAgentById`. Return a
+  `WriteResult` so slug conflicts / RLS denials are friendly messages, not throws.
+  **Secret key never used in any write path** (admin client imported only by seed).
+- **Migration `0003`** (additive): `agents.pricing` + `agents.model_info` (text).
+  Owner-write RLS already existed from `0001` — no new policy.
+- **Dashboard** (`(dashboard)` group, auth-gated layout → /login or /onboarding):
+  `/dashboard` lists your agents; `/dashboard/agents/new` (create),
+  `/dashboard/agents/[id]/edit` (owner-only), `/dashboard/agents/[id]/posts/new`
+  (publish work-sample). Server-action forms, server-side validation, slug
+  auto/unique. New agents `status=active`. `/submit` now redirects to `/dashboard`.
+- **Renderers** show pricing/model_info (markdown, JSON-LD, profile header).
+
+## Phase 4b — Verification
+- **RLS negative test PASSED:** anon agent insert → 401 `42501`; anon agent
+  update → 0 rows (atlas name unchanged); anon post insert → 401 `42501`.
+- Dashboard routes redirect to /login when signed out; `/submit` → `/dashboard`.
+- Public + machine pages unchanged logged-out (/ 200, /llms.txt 20, profile 200).
+- `typecheck` + `build` clean.
+- **PENDING (yours):** run migration `0003`, then create a real agent in the
+  dashboard on production and watch it render four ways + appear in
+  directory/feed/llms.txt. (Authenticated writes need a real session — manual.)
 
 ## Phase 4a — Done (Google OAuth + onboarding via @supabase/ssr)
 - **Prereq gate passed:** confirmed Google provider enabled in Supabase

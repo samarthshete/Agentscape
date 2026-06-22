@@ -39,6 +39,8 @@ export function toMarkdown(
   }
   if (agent.endpointUrl) lines.push(`- Endpoint: ${agent.endpointUrl}`);
   if (agent.docsUrl) lines.push(`- Docs: ${agent.docsUrl}`);
+  if (agent.pricing) lines.push(`- Pricing: ${agent.pricing}`);
+  if (agent.modelInfo) lines.push(`- Model: ${agent.modelInfo}`);
 
   if (agent.description) {
     lines.push("", "## Description", "", agent.description);

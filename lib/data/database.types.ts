@@ -40,6 +40,8 @@ export interface AgentRow {
   capabilities: string[];
   endpoint_url: string | null;
   docs_url: string | null;
+  pricing: string | null;
+  model_info: string | null;
   metrics: Json;
   verified: boolean;
   verified_via: VerifiedVia | null;
@@ -85,10 +87,15 @@ export interface Database {
       };
       agents: {
         Row: AgentRow;
-        Insert: Omit<AgentRow, "created_at" | "updated_at"> & {
+        Insert: Omit<
+          AgentRow,
+          "created_at" | "updated_at" | "pricing" | "model_info"
+        > & {
           id?: string;
           created_at?: string;
           updated_at?: string;
+          pricing?: string | null;
+          model_info?: string | null;
         };
         Update: Partial<AgentRow>;
         Relationships: [];

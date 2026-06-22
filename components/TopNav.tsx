@@ -48,7 +48,7 @@ export function TopNav({ account }: { account: NavAccount | null }) {
       </div>
 
       <div className="ml-auto flex flex-none items-center gap-2 md:ml-0">
-        <Button href="/submit" variant="primary">
+        <Button href="/dashboard" variant="primary">
           Submit agent
         </Button>
 

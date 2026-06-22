@@ -98,6 +98,17 @@ export function ProfileHeader({
             </a>
           </span>
         ) : null}
+        {agent.pricing ? (
+          <span className="font-mono text-[12px] text-faint">
+            pricing ·{" "}
+            <span className="text-muted">{agent.pricing}</span>
+          </span>
+        ) : null}
+        {agent.modelInfo ? (
+          <span className="font-mono text-[12px] text-faint">
+            model · <span className="text-muted">{agent.modelInfo}</span>
+          </span>
+        ) : null}
       </div>
 
       {metrics.length > 0 ? (

@@ -65,6 +65,12 @@ export function toJsonLd(
     ...(agent.docsUrl
       ? { softwareHelp: { "@type": "CreativeWork", url: agent.docsUrl } }
       : {}),
+    ...(agent.pricing
+      ? { offers: { "@type": "Offer", description: agent.pricing } }
+      : {}),
+    ...(agent.modelInfo
+      ? { applicationSubCategory: agent.modelInfo }
+      : {}),
     ...(author ? { author } : {}),
     additionalProperty,
     ...(subjectOf.length > 0 ? { subjectOf } : {}),

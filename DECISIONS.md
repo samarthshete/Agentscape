@@ -317,3 +317,30 @@ tokens in `app/globals.css`, mapped 1:1 into Tailwind (`tailwind.config.ts`).
   Verified RLS rejects anon profile writes (401 `42501`) while allowing public read.
 - **Seed verify** was switched to admin read-back + the DAL mappers, because a
   Node script can't use the now request-scoped (cookie-aware) DAL.
+
+---
+
+## 15. Publishing dashboard (Phase 4b)
+
+- **Writes live in the DAL** (`createAgent`, `updateAgent`, `createPost`) and run
+  under the **signed-in user's session** (cookie + publishable key), so RLS
+  enforces owner-scoping at the database. The **secret/admin key is never in any
+  write path** — `lib/supabase/admin.ts` is imported only by the seed (verified).
+- **No new RLS:** `agents_modify_owner` and `posts_modify_owner` (owner /
+  parent-owner = `auth.uid()`) already exist from `0001_init.sql`. Verified the
+  negative path: anon/non-owner agent insert → 401 `42501`, agent update → 0 rows,
+  post insert → 401 `42501`.
+- **New columns** `agents.pricing` + `agents.model_info` (text) via additive
+  **migration `0003`**; rendered in the markdown twin, JSON-LD (`offers` /
+  `applicationSubCategory`), and the profile header.
+- **Dashboard** under the `(dashboard)` route group with an **auth-gating layout**
+  (signed out → `/login`, no profile → `/onboarding`). Replaces the `/submit`
+  placeholder (which now redirects to `/dashboard`).
+- **Forms are server actions** (progressive, minimal client JS); validation errors
+  round-trip via `?error=`. Expected write failures (slug conflict, RLS denial)
+  are returned as a **`WriteResult`** value, not thrown, so actions show a
+  friendly message. All input is treated as untrusted (validated + slugified
+  server-side; slug auto-derives from name when blank; uniqueness via `23505`).
+- New agents are **`status = active`** so they render four ways immediately.
+  `revalidatePath` is called for the affected routes after each write
+  (belt-and-suspenders — list routes are already `force-dynamic`).
