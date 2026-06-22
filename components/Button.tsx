@@ -1,4 +1,5 @@
-import type { AnchorHTMLAttributes, ButtonHTMLAttributes, ReactNode } from "react";
+import Link from "next/link";
+import type { ReactNode } from "react";
 
 type Variant = "primary" | "secondary" | "text";
 
@@ -8,37 +9,56 @@ const BASE =
 const VARIANTS: Record<Variant, string> = {
   primary:
     "bg-accent text-accent-foreground font-[560] hover:brightness-110 border border-transparent",
-  secondary:
-    "bg-card text-foreground border border-border hover:border-faint",
+  secondary: "bg-card text-foreground border border-border hover:border-faint",
   text: "bg-transparent text-muted hover:text-foreground px-3",
 };
 
-interface CommonProps {
+interface Props {
   variant?: Variant;
+  href?: string;
+  type?: "button" | "submit" | "reset";
+  target?: string;
+  rel?: string;
+  ariaLabel?: string;
   children: ReactNode;
 }
 
-type ButtonProps = CommonProps &
-  Omit<ButtonHTMLAttributes<HTMLButtonElement>, "className"> & { href?: undefined };
-type AnchorProps = CommonProps &
-  Omit<AnchorHTMLAttributes<HTMLAnchorElement>, "className"> & { href: string };
-
-// Presentational button. Renders an <a> when `href` is set, else a <button>.
-export function Button(props: ButtonProps | AnchorProps) {
-  const { variant = "primary", children } = props;
+// Presentational button. Internal href → next/link <Link>; external href → <a>;
+// otherwise a <button>. (Internal nav must use Link for client routing + lint.)
+export function Button({
+  variant = "primary",
+  href,
+  type = "button",
+  target,
+  rel,
+  ariaLabel,
+  children,
+}: Props) {
   const className = `${BASE} ${VARIANTS[variant]}`;
 
-  if ("href" in props && props.href !== undefined) {
-    const { variant: _v, children: _c, ...rest } = props;
+  if (href !== undefined) {
+    if (href.startsWith("/") && !target) {
+      return (
+        <Link href={href} className={className} aria-label={ariaLabel}>
+          {children}
+        </Link>
+      );
+    }
     return (
-      <a className={className} {...rest}>
+      <a
+        href={href}
+        className={className}
+        target={target}
+        rel={rel}
+        aria-label={ariaLabel}
+      >
         {children}
       </a>
     );
   }
-  const { variant: _v, children: _c, href: _h, ...rest } = props as ButtonProps;
+
   return (
-    <button className={className} {...rest}>
+    <button className={className} type={type} aria-label={ariaLabel}>
       {children}
     </button>
   );

@@ -72,12 +72,24 @@ export function formatProof(proof: PostProof): ProofDisplay {
     if (Array.isArray(value)) {
       context.push({ label: key, value: value.map((v) => String(v)).join(", ") });
     } else if (value !== null && typeof value === "object") {
-      // Nested group (baseline / before / after, …): de-path children, keep the
-      // group name as the note rather than a "group.child" dotted key.
+      // Nested group (baseline / before / after, …). Numeric children de-path to
+      // the child key with the group as a note; string/bool children carry the
+      // GROUP name as their label (so baseline.name → "baseline: GPT-class RAG…",
+      // never an orphaned "name" or a dotted "baseline.name").
       for (const [childKey, childVal] of Object.entries(
         value as Record<string, unknown>,
       )) {
-        add(childKey, childVal, key);
+        if (typeof childVal === "number") {
+          metrics.push({ label: childKey, value: formatNumber(childVal), note: key });
+        } else if (typeof childVal === "string") {
+          context.push(
+            isUrl(childVal)
+              ? { label: key, value: childVal, href: childVal }
+              : { label: key, value: childVal },
+          );
+        } else if (typeof childVal === "boolean") {
+          context.push({ label: key, value: childVal ? "yes" : "no" });
+        }
       }
     } else {
       add(key, value);

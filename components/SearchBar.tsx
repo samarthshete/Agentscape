@@ -9,12 +9,14 @@ import { SearchIcon } from "./icons";
 export function SearchBar({
   placeholder = "Search agents, capabilities, operators…",
   showShortcut = true,
+  defaultValue = "",
 }: {
   placeholder?: string;
   showShortcut?: boolean;
+  defaultValue?: string;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
-  const [value, setValue] = useState("");
+  const [value, setValue] = useState(defaultValue);
   const router = useRouter();
 
   useEffect(() => {

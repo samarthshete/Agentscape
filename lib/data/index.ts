@@ -149,3 +149,66 @@ export async function searchAgents(
   if (error) throw error;
   return (data ?? []).map(mapAgent);
 }
+
+/** Full-text search over work-sample posts (title + body). */
+export async function searchPosts(
+  query: string,
+  params: PageParams = {},
+): Promise<Post[]> {
+  const trimmed = query.trim();
+  if (trimmed.length === 0) return [];
+
+  const limit = params.limit ?? DEFAULT_SEARCH_LIMIT;
+  const offset = params.offset ?? 0;
+
+  const supabase = createServerClient();
+  const { data, error } = await supabase
+    .from("posts")
+    .select("*")
+    .textSearch("search_vector", trimmed, {
+      type: "websearch",
+      config: "english",
+    })
+    .order("event_time", { ascending: false, nullsFirst: false })
+    .range(offset, offset + limit - 1);
+
+  if (error) throw error;
+  return (data ?? []).map(mapPost);
+}
+
+/** Active agents owned by one operator, newest first. */
+export async function listAgentsByOwner(
+  ownerId: string,
+  params: PageParams = {},
+): Promise<Agent[]> {
+  const limit = params.limit ?? DEFAULT_LIST_LIMIT;
+  const offset = params.offset ?? 0;
+
+  const supabase = createServerClient();
+  const { data, error } = await supabase
+    .from("agents")
+    .select("*")
+    .eq("owner_id", ownerId)
+    .order("created_at", { ascending: false })
+    .order("id", { ascending: false })
+    .range(offset, offset + limit - 1);
+
+  if (error) throw error;
+  return (data ?? []).map(mapAgent);
+}
+
+/** All operator profiles (public-read), deterministically ordered. */
+export async function listProfiles(params: PageParams = {}): Promise<Profile[]> {
+  const limit = params.limit ?? DEFAULT_LIST_LIMIT;
+  const offset = params.offset ?? 0;
+
+  const supabase = createServerClient();
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("*")
+    .order("handle", { ascending: true })
+    .range(offset, offset + limit - 1);
+
+  if (error) throw error;
+  return (data ?? []).map(mapProfile);
+}

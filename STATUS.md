@@ -3,9 +3,39 @@
 > Updated at the end of every working session (operating rule).
 
 ## Current phase
-**Phase 3b-i — Design system + component library + profile restyle. Complete
-(pending your review).** Phase 2 de-risk gate: **PASSED (2026-06-21)**.
-Next is **3b-ii** (landing/feed/directory/search/operator pages) — not started.
+**Phase 3b-ii — Human list views. Complete (pending your review).**
+Phase 2 de-risk gate: **PASSED (2026-06-21)**.
+
+## Phase 3b-ii — Done (reusing the 3b-i component library)
+- **Landing `/`** — thesis hero, what-it-is, featured agents (real `listAgents`),
+  CTAs (Explore directory / Submit). force-dynamic.
+- **Feed `/feed`** — `getFeed` + agent map → WorkSampleCards. force-dynamic.
+- **Directory `/agents`** — `listAgents` → AgentCards, with a **query-param
+  capability filter** (`?capability=`) and pagination (`?page=`) — all SSR,
+  shareable, crawlable. force-dynamic.
+- **Search `/search?q=`** — `searchAgents` + new `searchPosts` → AgentCards +
+  WorkSampleCards; nav SearchBar navigates here; prefilled SearchBar. force-dynamic.
+- **Operator `/u/[handle]`** — `getProfileByHandle` + new `listAgentsByOwner` →
+  operator header + their AgentCards. **Clears the /u/[handle] 404s.**
+- **`/sitemap.xml`** (dynamic, pure `toSitemap`): all static routes + 20 agents
+  (lastmod = updated_at) + 8 operators. **`/robots.txt`** allows indexing, points
+  to the sitemap, references /llms.txt.
+- **New DAL functions** (lib/data, still the only DB access): `searchPosts`,
+  `listAgentsByOwner`, `listProfiles`.
+- **Nav wired**: Feed→/feed, Directory→/agents, Operators→/operators (real index
+  via `listProfiles`), Docs→/docs (minimal about/for-agents page), Submit→/submit
+  (placeholder — real publishing is the auth phase). Button now routes internal
+  hrefs through next/link.
+- **Proof refinement** carried from 3b-i: nested-group string children carry the
+  group label (`baseline: GPT-class RAG baseline`, not an orphaned `name`).
+
+## Phase 3b-ii — Verification (local)
+- Every page 200s with content in raw HTML. Directory `?capability=sql-generation`
+  → QueryWeaver in, Atlas out. `?q=sql` → QueryWeaver + MigrateMate; `?q=citation`
+  → Atlas + CiteGuard + post hits. `/u/lumen-labs` resolves with its agents.
+- `sitemap.xml` well-formed, 33 urls (20 agents + 8 operators + 5 routes);
+  `robots.txt` points to it. `/llms.txt` still 20 (no regression).
+- `npm run typecheck` exit 0; `npm run build` exit 0; all list routes are `ƒ`.
 
 ## Phase 3b-i — polish (2026-06-21): WorkSampleCard proof block
 - **Reworked `formatProof`** (`components/format.ts`) from a flat JSON-dump into a
@@ -209,13 +239,14 @@ two independent LLMs, **Gemini** and **ChatGPT**, in fresh sessions.
   been dropped twice now, breaking `next build` with MODULE_NOT_FOUND. Fix is a
   clean `rm -rf node_modules && npm install`. Not a code defect.
 
-## Next up (Phase 3b) — after you verify the 3a data
-- Human list-view UI over the now-populated data: landing page, public feed,
-  directory `/agents` (filter by capability, paginated), operator pages
-  `/u/[handle]`, search results page over `tsvector`, post cards; sitemap/robots.
-- **Do not start 3b until you confirm the seed data looks right.**
+## Next up — Phase 4 (Auth), per PLAN.md
+- Supabase Auth + Google OAuth (server-side, middleware token refresh);
+  onboarding (handle/display name); operator dashboard (create/edit agent,
+  publish work-sample); enforce RLS end-to-end; follow/bookmark/like.
+- Replaces the `/submit` placeholder with the real publishing flow.
 
 ## Blocked / needs you
-- Your review of the 3a seed data (live: https://agentscape-kappa.vercel.app).
+- Your review of 3b-ii (live: https://agentscape-kappa.vercel.app).
+- A quick 390px eyeball (no-horizontal-scroll) on landing/feed/directory.
 - For full migration automation later, a Postgres connection string
   (`DATABASE_URL`) would let `psql`/CLI apply migrations without the dashboard.
