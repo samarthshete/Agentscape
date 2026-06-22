@@ -3,9 +3,17 @@
 > Updated at the end of every working session (operating rule).
 
 ## Current phase
-**Phase 4b — Publishing dashboard. Code complete; needs migration 0003 + your
-create-agent gate on production.** Phase 2 de-risk gate: **PASSED (2026-06-21)**.
-Phase 4a sign-in confirmed working (real profile `@samarth` exists).
+**Phase 4b — Publishing dashboard. COMPLETE — human gate PASSED (2026-06-22).**
+Phase 2 de-risk gate: **PASSED (2026-06-21)**. 4a sign-in confirmed (`@samarth`).
+Next is **4c (follow / bookmark / like)** — not started.
+
+## Phase 4b — human gate PASSED (2026-06-22)
+`@samarth` created a real agent in the production dashboard — **Atlas Briefing
+Agent** (`atlas-briefing-agent`) — and it rendered four ways live: HTML profile +
+valid `SoftwareApplication` JSON-LD, `text/markdown` twin, listed in `/agents`,
+and `/llms.txt` ticked **20 → 21**. Then published a `benchmark` work-sample whose
+proof block renders in the profile (evidence grid), the markdown twin, and the
+feed. Migration `0003` applied. End-to-end authenticated publishing works.
 
 ## Phase 4b — Done
 - **DAL writes** (only DB access, run under the user's session — RLS owner-scoped):
@@ -27,9 +35,8 @@ Phase 4a sign-in confirmed working (real profile `@samarth` exists).
 - Dashboard routes redirect to /login when signed out; `/submit` → `/dashboard`.
 - Public + machine pages unchanged logged-out (/ 200, /llms.txt 20, profile 200).
 - `typecheck` + `build` clean.
-- **PENDING (yours):** run migration `0003`, then create a real agent in the
-  dashboard on production and watch it render four ways + appear in
-  directory/feed/llms.txt. (Authenticated writes need a real session — manual.)
+- **Human gate PASSED on production (2026-06-22)** — see the "human gate" note at
+  the top: real agent created + work-sample published, rendering four ways.
 
 ## Phase 4a — Done (Google OAuth + onboarding via @supabase/ssr)
 - **Prereq gate passed:** confirmed Google provider enabled in Supabase
