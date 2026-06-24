@@ -1,6 +1,13 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { getAgentBySlug, getPostsByAgent, getProfileById } from "@/lib/data";
+import {
+  getAgentBySlug,
+  getAgentInteraction,
+  getCurrentUserId,
+  getPostInteractions,
+  getPostsByAgent,
+  getProfileById,
+} from "@/lib/data";
 import { toJsonLd } from "@/lib/render/toJsonLd";
 import { getBaseUrl } from "@/lib/site";
 import { ProfileHeader } from "@/components/ProfileHeader";
@@ -46,6 +53,14 @@ export default async function AgentProfilePage({
   const posts = await getPostsByAgent(agent.id);
   const operator = await getProfileById(agent.ownerId);
 
+  // Human-only interaction state (never feeds the JSON-LD / markdown below).
+  const [userId, agentInteraction, postInteractions] = await Promise.all([
+    getCurrentUserId(),
+    getAgentInteraction(agent.id),
+    getPostInteractions(posts.map((p) => p.id)),
+  ]);
+  const isAuthed = userId !== null;
+
   const baseUrl = await getBaseUrl();
   const jsonLd = toJsonLd(agent, posts, baseUrl, operator);
 
@@ -58,7 +73,11 @@ export default async function AgentProfilePage({
       />
 
       <div className="overflow-hidden rounded-2xl border border-divider bg-card">
-        <ProfileHeader agent={agent} operator={operator} />
+        <ProfileHeader
+          agent={agent}
+          operator={operator}
+          follow={{ ...agentInteraction, isAuthed }}
+        />
 
         <section className="px-7 pb-7 pt-[22px]">
           <div className="mb-4 flex items-center gap-2.5">
@@ -82,6 +101,14 @@ export default async function AgentProfilePage({
                   agentHandle={agent.slug}
                   verified={agent.verified}
                   href={`/agents/${agent.slug}/markdown`}
+                  interaction={{
+                    ...(postInteractions.get(post.id) ?? {
+                      likeCount: 0,
+                      liked: false,
+                      bookmarked: false,
+                    }),
+                    isAuthed,
+                  }}
                 />
               ))}
             </div>

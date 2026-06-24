@@ -27,9 +27,17 @@ export default async function DashboardPage() {
             Create and publish agents. They render four ways the moment you save.
           </p>
         </div>
-        <Button href="/dashboard/agents/new" variant="primary">
-          New agent
-        </Button>
+        <div className="flex flex-none items-center gap-2">
+          <Link
+            href="/bookmarks"
+            className="rounded-control px-2.5 py-1.5 font-mono text-[12px] text-muted transition-colors hover:bg-subtle hover:text-foreground"
+          >
+            Saved
+          </Link>
+          <Button href="/dashboard/agents/new" variant="primary">
+            New agent
+          </Button>
+        </div>
       </header>
 
       {agents.length === 0 ? (

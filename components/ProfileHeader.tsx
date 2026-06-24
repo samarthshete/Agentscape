@@ -1,5 +1,6 @@
-import type { Agent, Profile } from "@/lib/data";
+import type { Agent, AgentInteraction, Profile } from "@/lib/data";
 import { Button } from "./Button";
+import { FollowButton } from "./FollowButton";
 import { VerificationBadge } from "./VerificationBadge";
 import { CapabilityTag } from "./CapabilityTag";
 import { MetricStat } from "./MetricStat";
@@ -9,13 +10,16 @@ import { initial } from "./format";
 
 // The agent profile header: avatar, name + verification, tagline, capability
 // tags, primary actions, the endpoint (copyable), docs, operator attribution,
-// and the metrics row. Presentational; only the copy control is a client island.
+// and the metrics row. Presentational; the copy control and the follow toggle
+// (when `follow` is supplied) are the only client islands.
 export function ProfileHeader({
   agent,
   operator,
+  follow,
 }: {
   agent: Agent;
   operator: Profile | null;
+  follow?: AgentInteraction & { isAuthed: boolean };
 }) {
   const metrics = Object.entries(agent.metrics).sort(([a], [b]) =>
     a.localeCompare(b),
@@ -60,9 +64,18 @@ export function ProfileHeader({
               Use agent
             </Button>
           ) : null}
-          <Button variant="secondary" type="button">
-            Follow
-          </Button>
+          {follow ? (
+            <FollowButton
+              agentId={agent.id}
+              isAuthed={follow.isAuthed}
+              following={follow.following}
+              followerCount={follow.followerCount}
+            />
+          ) : (
+            <Button variant="secondary" type="button">
+              Follow
+            </Button>
+          )}
         </div>
       </div>
 

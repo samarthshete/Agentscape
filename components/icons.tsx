@@ -52,6 +52,32 @@ export function CopyIcon(props: SVGProps<SVGSVGElement>) {
   );
 }
 
+export function HeartIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 16 16" fill="none" aria-hidden="true" {...props}>
+      <path
+        d="M8 13.3 2.9 8.2a3 3 0 0 1 4.2-4.3L8 4.8l.9-.9a3 3 0 1 1 4.2 4.3L8 13.3Z"
+        stroke="currentColor"
+        strokeWidth="1.3"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+export function BookmarkIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 16 16" fill="none" aria-hidden="true" {...props}>
+      <path
+        d="M4 2.6h8a.4.4 0 0 1 .4.4v10.4L8 11.3l-4.4 2.1V3a.4.4 0 0 1 .4-.4Z"
+        stroke="currentColor"
+        strokeWidth="1.3"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 export function SunIcon(props: SVGProps<SVGSVGElement>) {
   return (
     <svg viewBox="0 0 16 16" fill="none" aria-hidden="true" {...props}>

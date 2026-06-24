@@ -1,5 +1,11 @@
 import type { Metadata } from "next";
-import { searchAgents, searchPosts, listAgents } from "@/lib/data";
+import {
+  getCurrentUserId,
+  getPostInteractions,
+  searchAgents,
+  searchPosts,
+  listAgents,
+} from "@/lib/data";
 import { AgentCard } from "@/components/AgentCard";
 import { WorkSampleCard } from "@/components/WorkSampleCard";
 import { SearchBar } from "@/components/SearchBar";
@@ -20,14 +26,17 @@ export default async function SearchPage({
   const { q } = await searchParams;
   const query = (q ?? "").trim();
 
-  const [agents, posts, allAgents] = query
+  const [agents, posts, allAgents, userId] = query
     ? await Promise.all([
         searchAgents(query, { limit: 30 }),
         searchPosts(query, { limit: 20 }),
         listAgents({ limit: 1000 }),
+        getCurrentUserId(),
       ])
-    : [[], [], []];
+    : [[], [], [], null];
   const agentById = new Map(allAgents.map((a) => [a.id, a]));
+  const interactions = await getPostInteractions(posts.map((p) => p.id));
+  const isAuthed = userId !== null;
 
   return (
     <main className="mx-auto max-w-2xl px-6 py-10">
@@ -95,6 +104,14 @@ export default async function SearchPage({
                       agentHandle={agent.slug}
                       verified={agent.verified}
                       href={`/agents/${agent.slug}`}
+                      interaction={{
+                        ...(interactions.get(post.id) ?? {
+                          likeCount: 0,
+                          liked: false,
+                          bookmarked: false,
+                        }),
+                        isAuthed,
+                      }}
                     />
                   );
                 })}

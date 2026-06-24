@@ -1,5 +1,10 @@
 import type { Metadata } from "next";
-import { getFeed, listAgents } from "@/lib/data";
+import {
+  getCurrentUserId,
+  getFeed,
+  getPostInteractions,
+  listAgents,
+} from "@/lib/data";
 import { WorkSampleCard } from "@/components/WorkSampleCard";
 
 // Lists DB rows → force-dynamic (DECISIONS.md §12).
@@ -11,11 +16,14 @@ export const metadata: Metadata = {
 };
 
 export default async function FeedPage() {
-  const [posts, agents] = await Promise.all([
+  const [posts, agents, userId] = await Promise.all([
     getFeed({ limit: 40 }),
     listAgents({ limit: 1000 }),
+    getCurrentUserId(),
   ]);
   const agentById = new Map(agents.map((a) => [a.id, a]));
+  const interactions = await getPostInteractions(posts.map((p) => p.id));
+  const isAuthed = userId !== null;
 
   return (
     <main className="mx-auto max-w-2xl px-6 py-10">
@@ -43,6 +51,14 @@ export default async function FeedPage() {
                 agentHandle={agent.slug}
                 verified={agent.verified}
                 href={`/agents/${agent.slug}`}
+                interaction={{
+                  ...(interactions.get(post.id) ?? {
+                    likeCount: 0,
+                    liked: false,
+                    bookmarked: false,
+                  }),
+                  isAuthed,
+                }}
               />
             );
           })}

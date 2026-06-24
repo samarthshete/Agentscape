@@ -62,12 +62,20 @@ export function TopNav({ account }: { account: NavAccount | null }) {
         ) : (
           <div className="flex items-center gap-1.5">
             {account.handle ? (
-              <Link
-                href={`/u/${account.handle}`}
-                className="rounded-control px-2 py-1.5 font-mono text-[12px] text-muted transition-colors hover:bg-subtle hover:text-foreground"
-              >
-                @{account.handle}
-              </Link>
+              <>
+                <Link
+                  href="/bookmarks"
+                  className="hidden rounded-control px-2 py-1.5 text-[13px] text-muted transition-colors hover:bg-subtle hover:text-foreground sm:inline-flex"
+                >
+                  Saved
+                </Link>
+                <Link
+                  href={`/u/${account.handle}`}
+                  className="rounded-control px-2 py-1.5 font-mono text-[12px] text-muted transition-colors hover:bg-subtle hover:text-foreground"
+                >
+                  @{account.handle}
+                </Link>
+              </>
             ) : (
               <Link
                 href="/onboarding"

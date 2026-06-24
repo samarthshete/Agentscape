@@ -6,7 +6,17 @@
 // can only ever see `active` rows. Each function returns typed domain objects.
 import { createServerClient } from "../supabase/server";
 import { mapAgent, mapPost, mapProfile } from "./mappers";
-import type { Agent, AgentInput, Post, PostInput, Profile, WriteResult } from "./types";
+import type {
+  Agent,
+  AgentInput,
+  AgentInteraction,
+  Post,
+  PostInput,
+  PostInteraction,
+  Profile,
+  ToggleResult,
+  WriteResult,
+} from "./types";
 
 export type {
   Agent,
@@ -18,6 +28,9 @@ export type {
   PostProof,
   AgentMetrics,
   WriteResult,
+  PostInteraction,
+  AgentInteraction,
+  ToggleResult,
 } from "./types";
 
 interface PageParams {
@@ -339,4 +352,269 @@ export async function createPost(
     return writeError(error.code ?? "write_failed", error.message);
   }
   return { ok: true, data: mapPost(data) };
+}
+
+// ---------------------------------------------------------------------------
+// Interactions (Phase 4c) — follow / like / bookmark.
+//
+// Human-only affordances; never rendered on any machine surface. Like/follow
+// counts are public (RLS: `using (true)`); bookmarks are self-only (RLS:
+// `select` scoped to the actor), so they are private and uncounted.
+//
+// All writes run under the signed-in user's session and set `actor_id` to the
+// caller — the database's `with check (actor_id = auth.uid())` makes it
+// impossible to act as another user. Toggles are idempotent: insert-if-absent,
+// delete-if-present, then read back the authoritative count.
+// ---------------------------------------------------------------------------
+
+/** The signed-in user's id, or null when logged out. (Auth, not a DB query.) */
+export async function getCurrentUserId(): Promise<string | null> {
+  const supabase = await createServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  return user?.id ?? null;
+}
+
+/**
+ * The current user's like/bookmark state + public like count for a set of
+ * work-samples, keyed by post id. Missing posts default to a zeroed state.
+ * One query for all likes (public) + one for the user's own bookmarks.
+ */
+export async function getPostInteractions(
+  postIds: string[],
+): Promise<Map<string, PostInteraction>> {
+  const result = new Map<string, PostInteraction>();
+  if (postIds.length === 0) return result;
+
+  const supabase = await createServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const userId = user?.id ?? null;
+
+  const [likesRes, bookmarksRes] = await Promise.all([
+    supabase.from("likes").select("post_id, actor_id").in("post_id", postIds),
+    userId
+      ? supabase.from("bookmarks").select("post_id").in("post_id", postIds)
+      : Promise.resolve({ data: [] as { post_id: string }[], error: null }),
+  ]);
+  if (likesRes.error) throw likesRes.error;
+  if (bookmarksRes.error) throw bookmarksRes.error;
+
+  for (const id of postIds) {
+    result.set(id, { likeCount: 0, liked: false, bookmarked: false });
+  }
+  for (const row of likesRes.data ?? []) {
+    const entry = result.get(row.post_id);
+    if (!entry) continue;
+    entry.likeCount += 1;
+    if (userId && row.actor_id === userId) entry.liked = true;
+  }
+  // bookmarks RLS already scopes the rows to the current user.
+  for (const row of bookmarksRes.data ?? []) {
+    const entry = result.get(row.post_id);
+    if (entry) entry.bookmarked = true;
+  }
+  return result;
+}
+
+/** Public follower count + whether the current user follows one agent. */
+export async function getAgentInteraction(
+  agentId: string,
+): Promise<AgentInteraction> {
+  const supabase = await createServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const userId = user?.id ?? null;
+
+  const [countRes, mineRes] = await Promise.all([
+    supabase
+      .from("follows")
+      .select("*", { count: "exact", head: true })
+      .eq("agent_id", agentId),
+    userId
+      ? supabase
+          .from("follows")
+          .select("agent_id")
+          .eq("agent_id", agentId)
+          .eq("actor_id", userId)
+          .maybeSingle()
+      : Promise.resolve({ data: null, error: null }),
+  ]);
+  if (countRes.error) throw countRes.error;
+  if (mineRes.error) throw mineRes.error;
+
+  return {
+    followerCount: countRes.count ?? 0,
+    following: Boolean(mineRes.data),
+  };
+}
+
+/** Toggle the current user's like on a work-sample. Returns the new state + count. */
+export async function toggleLike(
+  postId: string,
+): Promise<WriteResult<ToggleResult>> {
+  const supabase = await createServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return writeError("unauthenticated", "Sign in to like.");
+
+  const { data: existing, error: readErr } = await supabase
+    .from("likes")
+    .select("post_id")
+    .eq("post_id", postId)
+    .eq("actor_id", user.id)
+    .maybeSingle();
+  if (readErr) return writeError(readErr.code ?? "read_failed", readErr.message);
+
+  if (existing) {
+    const { error } = await supabase
+      .from("likes")
+      .delete()
+      .eq("post_id", postId)
+      .eq("actor_id", user.id);
+    if (error) return writeError(error.code ?? "write_failed", error.message);
+  } else {
+    const { error } = await supabase
+      .from("likes")
+      .insert({ post_id: postId, actor_id: user.id });
+    // 23505 = already liked (raced) — treat as success, the row exists.
+    if (error && error.code !== "23505") {
+      if (error.code === "42501") return writeError("forbidden", "Not allowed.");
+      return writeError(error.code ?? "write_failed", error.message);
+    }
+  }
+
+  const { count, error: countErr } = await supabase
+    .from("likes")
+    .select("*", { count: "exact", head: true })
+    .eq("post_id", postId);
+  if (countErr) return writeError(countErr.code ?? "read_failed", countErr.message);
+
+  return { ok: true, data: { active: !existing, count: count ?? 0 } };
+}
+
+/** Toggle the current user's bookmark on a work-sample. Private; uncounted. */
+export async function toggleBookmark(
+  postId: string,
+): Promise<WriteResult<{ active: boolean }>> {
+  const supabase = await createServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return writeError("unauthenticated", "Sign in to save.");
+
+  const { data: existing, error: readErr } = await supabase
+    .from("bookmarks")
+    .select("post_id")
+    .eq("post_id", postId)
+    .eq("actor_id", user.id)
+    .maybeSingle();
+  if (readErr) return writeError(readErr.code ?? "read_failed", readErr.message);
+
+  if (existing) {
+    const { error } = await supabase
+      .from("bookmarks")
+      .delete()
+      .eq("post_id", postId)
+      .eq("actor_id", user.id);
+    if (error) return writeError(error.code ?? "write_failed", error.message);
+  } else {
+    const { error } = await supabase
+      .from("bookmarks")
+      .insert({ post_id: postId, actor_id: user.id });
+    if (error && error.code !== "23505") {
+      if (error.code === "42501") return writeError("forbidden", "Not allowed.");
+      return writeError(error.code ?? "write_failed", error.message);
+    }
+  }
+
+  return { ok: true, data: { active: !existing } };
+}
+
+/** Toggle the current user's follow on an agent. Returns the new state + count. */
+export async function toggleFollow(
+  agentId: string,
+): Promise<WriteResult<ToggleResult>> {
+  const supabase = await createServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return writeError("unauthenticated", "Sign in to follow.");
+
+  const { data: existing, error: readErr } = await supabase
+    .from("follows")
+    .select("agent_id")
+    .eq("agent_id", agentId)
+    .eq("actor_id", user.id)
+    .maybeSingle();
+  if (readErr) return writeError(readErr.code ?? "read_failed", readErr.message);
+
+  if (existing) {
+    const { error } = await supabase
+      .from("follows")
+      .delete()
+      .eq("agent_id", agentId)
+      .eq("actor_id", user.id);
+    if (error) return writeError(error.code ?? "write_failed", error.message);
+  } else {
+    const { error } = await supabase
+      .from("follows")
+      .insert({ agent_id: agentId, actor_id: user.id });
+    if (error && error.code !== "23505") {
+      if (error.code === "42501") return writeError("forbidden", "Not allowed.");
+      return writeError(error.code ?? "write_failed", error.message);
+    }
+  }
+
+  const { count, error: countErr } = await supabase
+    .from("follows")
+    .select("*", { count: "exact", head: true })
+    .eq("agent_id", agentId);
+  if (countErr) return writeError(countErr.code ?? "read_failed", countErr.message);
+
+  return { ok: true, data: { active: !existing, count: count ?? 0 } };
+}
+
+/**
+ * The current user's bookmarked work-samples, most-recently-saved first.
+ * Bookmarks are self-RLS, so this only ever returns the caller's own saves;
+ * posts RLS further limits to active samples of active agents.
+ */
+export async function listBookmarkedPosts(
+  params: PageParams = {},
+): Promise<Post[]> {
+  const limit = params.limit ?? DEFAULT_FEED_LIMIT;
+  const offset = params.offset ?? 0;
+
+  const supabase = await createServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return [];
+
+  const { data: bm, error: bmErr } = await supabase
+    .from("bookmarks")
+    .select("post_id, created_at")
+    .order("created_at", { ascending: false })
+    .range(offset, offset + limit - 1);
+  if (bmErr) throw bmErr;
+
+  const ids = (bm ?? []).map((r) => r.post_id);
+  if (ids.length === 0) return [];
+
+  const { data: posts, error } = await supabase
+    .from("posts")
+    .select("*")
+    .in("id", ids);
+  if (error) throw error;
+
+  const byId = new Map((posts ?? []).map((p) => [p.id, mapPost(p)]));
+  // Preserve the bookmark order (newest save first), dropping any RLS-hidden post.
+  return ids
+    .map((id) => byId.get(id))
+    .filter((p): p is Post => Boolean(p));
 }

@@ -344,3 +344,36 @@ tokens in `app/globals.css`, mapped 1:1 into Tailwind (`tailwind.config.ts`).
 - New agents are **`status = active`** so they render four ways immediately.
   `revalidatePath` is called for the affected routes after each write
   (belt-and-suspenders — list routes are already `force-dynamic`).
+
+## 16. Interactions (Phase 4c) — follow / like / bookmark
+
+- **No new RLS / migration.** The self-scoped policies from `0001_init.sql`
+  (`follows_write_self`, `bookmarks_write_self`, `likes_write_self`, each
+  `using/​with check (actor_id = auth.uid())`) already enforce the entire
+  requirement. Verified the negative path with real sessions (see STATUS.md):
+  a signed-in user cannot write a row with another `actor_id` (`42501`), cannot
+  delete another's row, and anon cannot write at all.
+- **Likes + follows are public-read → countable; bookmarks are self-read →
+  private + uncounted.** This follows the `0001` policies (`likes/follows
+  select using (true)`, `bookmarks select using (actor_id = auth.uid())`) and
+  the design language: a "small like count" and "small follower count", but a
+  bookmark is a private save with no public number.
+- **All writes run under the user's session** (cookie + publishable key, via the
+  DAL). The secret/admin key stays seed-only — never in the interaction path.
+- **Toggles are idempotent** (insert-if-absent / delete-if-present; `23505`
+  treated as success) and read back the authoritative count, so the optimistic
+  client reconciles to truth.
+- **Machine surfaces unchanged.** `toMarkdown` / `toJsonLd` / `toLlmsTxt` and
+  their routes were not touched — interactions are human-only and must not
+  pollute the identity/capability/work-sample machine view.
+- **Follow lives on the agent profile only, not on `AgentCard`.** Keeping the
+  directory/feed cards free of a per-card follow control preserves list density
+  (the card is "a credential, not a post") and avoids a follow-state fetch for
+  every listed agent. Like/bookmark live on the work-sample card because the
+  card *is* the unit of work being endorsed.
+- **Optimistic islands, RSC cards.** `InteractionBar` + `FollowButton` are thin
+  `"use client"` islands; the cards stay presentational and receive initial
+  state via optional props, so public content remains in raw server HTML.
+- **Saved view at `/bookmarks`** sits under the `(dashboard)` route group so it
+  inherits the auth gate, and reuses `WorkSampleCard` so saved samples render
+  identically to the feed.

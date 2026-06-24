@@ -3,9 +3,58 @@
 > Updated at the end of every working session (operating rule).
 
 ## Current phase
-**Phase 4b — Publishing dashboard. COMPLETE — human gate PASSED (2026-06-22).**
-Phase 2 de-risk gate: **PASSED (2026-06-21)**. 4a sign-in confirmed (`@samarth`).
-Next is **4c (follow / bookmark / like)** — not started.
+**Phase 4c — Interactions (follow / like / bookmark). COMPLETE (2026-06-23)** —
+code + automated security gate done; awaiting human eyeball on production.
+Phase 4b human gate PASSED (2026-06-22). Phase 2 de-risk gate PASSED (2026-06-21).
+Next is **Phase 5 (verification badge + rate-limiting)** — not started.
+
+## Phase 4c — Done (follow / like / bookmark)
+Understated, human-only affordances over the existing registry — small counts,
+no engagement bait. Machine surfaces (markdown twin / JSON-LD / `/llms.txt`)
+deliberately UNCHANGED — interactions never appear there.
+- **RLS:** the self-scoped policies from `0001` (`follows_write_self`,
+  `bookmarks_write_self`, `likes_write_self`, each `actor_id = auth.uid()`) were
+  confirmed sufficient. **No new migration / policy.** Likes + follows are
+  public-read (countable); bookmarks are self-read (private, uncounted).
+- **DAL** (`lib/data`, still the only DB access): `toggleLike(postId)`,
+  `toggleBookmark(postId)`, `toggleFollow(agentId)` — idempotent (insert-if-
+  absent / delete-if-present, `23505` treated as success), each sets
+  `actor_id = auth.uid()` and reads back the authoritative count; return a
+  `WriteResult` (`unauthenticated` when signed out). Reads: `getCurrentUserId`,
+  `getPostInteractions(ids)` (batched like-count + the user's liked/bookmarked),
+  `getAgentInteraction(agentId)` (follower count + following), and
+  `listBookmarkedPosts()` for the Saved view.
+- **Client islands** (optimistic, roll back on error; signed-out click →
+  `/login`): `InteractionBar` (like + bookmark, on `WorkSampleCard` in feed /
+  profile / search) and `FollowButton` (on the profile `ProfileHeader`). Both are
+  thin `"use client"` islands fed initial state by the RSC; cards stay
+  presentational via optional `interaction` / `follow` props. Server-action
+  boundary: `app/actions/interactions.ts`.
+- **Saved view** `/bookmarks` (under the auth-gated `(dashboard)` group, reuses
+  `WorkSampleCard`) lists the user's bookmarks newest-first. Discoverable via a
+  "Saved" link in `TopNav` (when signed in) and on `/dashboard`.
+- **Follow kept to the profile only** (not `AgentCard`) to preserve directory
+  density per the design language — see DECISIONS.md §16.
+- **Optional "Following feed" not built** (explicitly optional; deferred).
+
+## Phase 4c — Verification
+- **Security gate PASSED (automated, real sessions):** signed in as user A,
+  A can like/follow/bookmark as itself; A **cannot** insert any interaction with
+  `actor_id = B` (RLS `42501` on likes/follows/bookmarks); A **cannot** delete
+  B's like (0 rows, B's row intact); **anon** cannot write at all (`42501`).
+- **Toggle correctness (automated, real session):** toggle on → `active=true`,
+  count +1, row persists on re-read; toggle off → `active=false`, count back to
+  baseline, row gone. Idempotent; **counts reflect reality.**
+- **Machine surfaces unchanged:** `/llms.txt` (no-store, 0 interaction words),
+  markdown twin (0 interaction words) — interactions are human-only.
+- **Signed-out:** profile/feed/search render the islands in raw HTML with the
+  liked/bookmarked/following state false; `/bookmarks` → 307 `/login`. Public +
+  machine pages unaffected.
+- `npm run typecheck` exit 0; `npm run build` exit 0 (all list routes `ƒ`,
+  `/bookmarks` present).
+- **PENDING (manual, production):** a real signed-in click-through (follow /
+  like / bookmark persist across reload; optimistic rollback) — yours to run,
+  like the 4a/4b human gates.
 
 ## Phase 4b — human gate PASSED (2026-06-22)
 `@samarth` created a real agent in the production dashboard — **Atlas Briefing

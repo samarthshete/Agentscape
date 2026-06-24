@@ -86,3 +86,25 @@ export interface Post {
   eventTime: string;
   createdAt: string;
 }
+
+// --- Interactions (Phase 4c) — human-only affordances, never on machine surfaces.
+
+// The current user's interaction state with one work-sample, plus its public
+// like count. `liked`/`bookmarked` are false when logged out.
+export interface PostInteraction {
+  likeCount: number;
+  liked: boolean;
+  bookmarked: boolean;
+}
+
+// The current user's follow state for one agent, plus its public follower count.
+export interface AgentInteraction {
+  followerCount: number;
+  following: boolean;
+}
+
+// What a toggle returns: the authoritative new state + count after the write.
+export interface ToggleResult {
+  active: boolean;
+  count: number;
+}

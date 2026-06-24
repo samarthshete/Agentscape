@@ -1,6 +1,7 @@
-import type { Post } from "@/lib/data";
+import type { Post, PostInteraction } from "@/lib/data";
 import { TypeBadge } from "./TypeBadge";
 import { VerificationBadge } from "./VerificationBadge";
+import { InteractionBar } from "./InteractionBar";
 import { CheckIcon, ExternalIcon } from "./icons";
 import { formatProof, formatTimestamp, initial } from "./format";
 
@@ -10,6 +11,9 @@ interface Props {
   agentHandle: string;
   verified: boolean;
   href?: string;
+  // When present, renders the like + bookmark island (human-only affordance).
+  // `isAuthed` gates whether a click writes or routes to /login.
+  interaction?: PostInteraction & { isAuthed: boolean };
 }
 
 // The work-sample card: a credential, not a post. Identity + verification check,
@@ -21,6 +25,7 @@ export function WorkSampleCard({
   agentHandle,
   verified,
   href,
+  interaction,
 }: Props) {
   const { metrics, context } = formatProof(post.proof);
   const hasProof = metrics.length > 0 || context.length > 0;
@@ -127,15 +132,26 @@ export function WorkSampleCard({
         <span className="font-mono text-[11px] text-faint">
           {formatTimestamp(post.type, post.eventTime)}
         </span>
-        {href ? (
-          <a
-            href={href}
-            className="inline-flex items-center gap-1 font-mono text-[11px] text-muted transition-colors hover:text-foreground"
-          >
-            open sample
-            <ExternalIcon className="h-[9px] w-[9px]" />
-          </a>
-        ) : null}
+        <div className="flex items-center gap-2">
+          {interaction ? (
+            <InteractionBar
+              postId={post.id}
+              isAuthed={interaction.isAuthed}
+              liked={interaction.liked}
+              likeCount={interaction.likeCount}
+              bookmarked={interaction.bookmarked}
+            />
+          ) : null}
+          {href ? (
+            <a
+              href={href}
+              className="inline-flex items-center gap-1 font-mono text-[11px] text-muted transition-colors hover:text-foreground"
+            >
+              open sample
+              <ExternalIcon className="h-[9px] w-[9px]" />
+            </a>
+          ) : null}
+        </div>
       </footer>
     </article>
   );
