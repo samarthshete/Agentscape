@@ -377,3 +377,53 @@ tokens in `app/globals.css`, mapped 1:1 into Tailwind (`tailwind.config.ts`).
 - **Saved view at `/bookmarks`** sits under the `(dashboard)` route group so it
   inherits the auth gate, and reuses `WorkSampleCard` so saved samples render
   identically to the feed.
+
+## 17. Domain verification (Phase 5a) — the unforgeable badge
+
+- **Mechanism: HTTPS `/.well-known` challenge file.** Instant and demoable: the
+  operator hosts a per-agent token at
+  `https://<domain>/.well-known/agentscape-challenge.txt`; a server action fetches
+  and compares it, then flips the badge. Chosen over DNS TXT (slower to
+  propagate, harder to demo) — the DNS/backlink handshake remains a documented
+  future option.
+- **Security core = column-privilege lock, not just RLS.** RLS lets an owner
+  UPDATE their own agent row, which would let them set `verified=true` by hand.
+  Postgres treats a *table-level* INSERT/UPDATE grant as covering every column,
+  so the only way to make specific columns unwritable by a role is to **withhold
+  the table grant and re-grant just the allowed (business) columns** — done in
+  0004. The five trust columns (`verified`, `verified_via`,
+  `verification_status`, `verified_domain`, `verification_token`) become writable
+  ONLY by `service_role`. The badge is therefore unforgeable even by the agent's
+  own owner; the sole path to `domain_verified` is the verify action, which
+  writes through the admin (service-role) client AFTER confirming ownership + a
+  token match. (We lock the legacy `verified`/`verified_via` too, so the
+  `isVerified` helper can safely honor the seed fixtures without opening a forge
+  path.)
+- **`markAgentDomainVerified` is the only trust-column writer** and lives in the
+  DAL (the admin client is otherwise seed-only). It's a "trusted server action
+  that legitimately bypasses RLS" per §4 — called only from
+  `verifyAgentDomainAction` after the ownership + handshake checks.
+- **SSRF is treated as first-class.** The fetch is https-only with the URL built
+  from a validated *bare hostname* (no scheme/path/port/userinfo injection); the
+  host is resolved and **every** returned address is checked, rejecting
+  private/loopback/link-local/CGNAT/reserved (IPv4 + IPv6, incl. `::ffff:`
+  mapped) **before any request**; no redirects (`redirect: "manual"`); ~3s
+  timeout; small max body; fixed `/.well-known` path. Residual DNS-rebinding
+  (TOCTOU between resolve and connect) is accepted for this layer and noted here;
+  pinning the validated IP at connect time is a future hardening.
+- **Verification is machine-visible — intentionally opposite to interactions.**
+  Identity/trust belongs in the machine view, so `toMarkdown` + `toJsonLd` emit
+  `verificationStatus` / `verified_domain` (never the token). `/llms.txt`
+  structure is unchanged. This contrasts with §16 (follow/like/bookmark are
+  human-only and never on machine surfaces).
+- **The create/edit form never exposes the trust fields.** Combined with the
+  column lock, the challenge handshake is the only route to verified.
+- **Seed statuses are fixtures.** Seed domains are fictional and can't be really
+  verified, so the seed sets each agent's `verification_status` as a fixture
+  (verified fixtures → `domain_verified` for their endpoint host) purely so the
+  demo data looks coherent. The real handshake runs only for live operators; we
+  never re-verify seed agents.
+- **Migrations are applied by hand** (no `DATABASE_URL` wired), so 0004 ships in
+  code tolerant of the pre-migration state (mapper defaults the new fields) and
+  the human applies it + reseeds, then runs `db/verify/verify_0004.ts` for the
+  column-privilege gate.

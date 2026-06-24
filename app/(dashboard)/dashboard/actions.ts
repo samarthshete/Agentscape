@@ -7,8 +7,15 @@ import {
   updateAgent,
   createPost,
   getAgentById,
+  markAgentDomainVerified,
 } from "@/lib/data";
 import type { AgentInput, AgentMetrics, PostInput, PostType } from "@/lib/data";
+import { createServerClient } from "@/lib/supabase/server";
+import {
+  ChallengeError,
+  fetchChallengeToken,
+  normalizeDomain,
+} from "@/lib/verification/challenge";
 
 // --- parsing helpers (all form input is untrusted) ---------------------------
 
@@ -173,6 +180,56 @@ export async function updateAgentAction(
   }
   revalidateAffected(result.data.slug);
   redirect(`/agents/${result.data.slug}`);
+}
+
+// Domain verification (Phase 5a). Confirms ownership, fetches the SSRF-guarded
+// HTTPS challenge, compares the token, and — only on a match — flips the badge
+// via the service-role write (markAgentDomainVerified). The owner can never set
+// the trust columns directly (column-privilege lock in 0004): this action is the
+// sole path to `domain_verified`.
+export async function verifyAgentDomainAction(
+  agentId: string,
+  formData: FormData,
+): Promise<void> {
+  const back = `/dashboard/agents/${agentId}/verify`;
+
+  const supabase = await createServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  const agent = await getAgentById(agentId);
+  // Only the owner may verify their own agent.
+  if (!agent || agent.ownerId !== user.id) redirect("/dashboard");
+
+  const domain = normalizeDomain(String(formData.get("domain") ?? ""));
+  if (!domain) {
+    redirect(`${back}?error=${encodeURIComponent("Enter a valid domain, e.g. example.com.")}`);
+  }
+
+  let token: string;
+  try {
+    token = await fetchChallengeToken(domain);
+  } catch (e) {
+    const message =
+      e instanceof ChallengeError ? e.message : "Could not complete verification.";
+    redirect(`${back}?error=${encodeURIComponent(message)}`);
+  }
+
+  if (token !== agent.verificationToken) {
+    redirect(
+      `${back}?error=${encodeURIComponent("Challenge file found, but the token did not match.")}`,
+    );
+  }
+
+  const result = await markAgentDomainVerified(agent.id, domain);
+  if (!result.ok) {
+    redirect(`${back}?error=${encodeURIComponent(result.message)}`);
+  }
+
+  revalidateAffected(agent.slug);
+  redirect(`${back}?status=verified`);
 }
 
 export async function createPostAction(

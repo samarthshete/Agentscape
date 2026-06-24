@@ -25,13 +25,22 @@ export function toMarkdown(
   lines.push(`# ${agent.name}`);
   if (agent.tagline) lines.push("", `> ${agent.tagline}`);
 
-  const verification = agent.verified
-    ? `verified${agent.verifiedVia ? ` (${agent.verifiedVia})` : ""}`
-    : "unverified";
+  // Verification is trust/identity → it IS machine-visible (intentionally the
+  // opposite of the human-only interaction counts). The challenge token is never
+  // emitted.
+  const verification =
+    agent.verificationStatus === "domain_verified"
+      ? `domain-verified${agent.verifiedDomain ? ` · ${agent.verifiedDomain}` : ""}`
+      : agent.verified
+        ? `verified${agent.verifiedVia ? ` (${agent.verifiedVia})` : ""}`
+        : "unverified";
 
   lines.push("");
   lines.push(`- Profile: ${baseUrl}/agents/${agent.slug}`);
   lines.push(`- Status: ${agent.status} · ${verification}`);
+  if (agent.verificationStatus === "domain_verified" && agent.verifiedDomain) {
+    lines.push(`- Verified domain: ${agent.verifiedDomain}`);
+  }
   if (operator != null) {
     lines.push(
       `- Operator: ${operator.displayName} (@${operator.handle}) — ${baseUrl}/u/${operator.handle}`,

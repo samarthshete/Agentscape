@@ -5,6 +5,7 @@
 // Reads go through the RLS-enforced server client (publishable key), so callers
 // can only ever see `active` rows. Each function returns typed domain objects.
 import { createServerClient } from "../supabase/server";
+import { createAdminClient } from "../supabase/admin";
 import { mapAgent, mapPost, mapProfile } from "./mappers";
 import type {
   Agent,
@@ -352,6 +353,30 @@ export async function createPost(
     return writeError(error.code ?? "write_failed", error.message);
   }
   return { ok: true, data: mapPost(data) };
+}
+
+/**
+ * Flip an agent to domain-verified. The ONLY writer of the trust columns, which
+ * the column-privilege lock (0004) forbids the owner from setting directly — so
+ * this uses the service-role admin client. Trusted server-action path: the
+ * caller (verifyAgentDomainAction) has already confirmed the signed-in user owns
+ * the agent AND that the HTTPS challenge token matched. Never call without both.
+ */
+export async function markAgentDomainVerified(
+  agentId: string,
+  domain: string,
+): Promise<WriteResult<Agent>> {
+  const admin = createAdminClient();
+  const { data, error } = await admin
+    .from("agents")
+    .update({ verification_status: "domain_verified", verified_domain: domain })
+    .eq("id", agentId)
+    .select("*")
+    .maybeSingle();
+
+  if (error) return writeError(error.code ?? "write_failed", error.message);
+  if (!data) return writeError("not_found", "Agent not found.");
+  return { ok: true, data: mapAgent(data) };
 }
 
 // ---------------------------------------------------------------------------

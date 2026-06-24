@@ -3,10 +3,75 @@
 > Updated at the end of every working session (operating rule).
 
 ## Current phase
-**Phase 4c — Interactions (follow / like / bookmark). COMPLETE (2026-06-23)** —
-code + automated security gate done; awaiting human eyeball on production.
-Phase 4b human gate PASSED (2026-06-22). Phase 2 de-risk gate PASSED (2026-06-21).
-Next is **Phase 5 (verification badge + rate-limiting)** — not started.
+**Phase 5a — Real domain verification. CODE COMPLETE (2026-06-23)** — SSRF gate
+verified locally; column-privilege gate + production happy-path PENDING the
+human applying migration 0004. 4c complete (2026-06-23). 4b human gate PASSED
+(2026-06-22). Phase 2 de-risk gate PASSED (2026-06-21).
+Next is **Phase 5b (rate-limiting)**, then the writeup/demo runbook.
+
+## Phase 5a — Done (HTTPS /.well-known domain verification)
+Real handshake: an operator hosts a per-agent token at
+`https://<domain>/.well-known/agentscape-challenge.txt`; a server action fetches
++ validates it (SSRF-guarded) and flips the badge. Verification is trust/identity
+so it IS machine-visible — the intentional opposite of the human-only 4c
+interactions.
+- **Migration 0004** (additive, idempotent — `db/migrations/0004_…sql`): adds
+  `verification_token` (random per agent, backfilled, NOT NULL + default),
+  `verification_status` ('unverified' | 'domain_verified', checked), and
+  `verified_domain`. **Security core — column-privilege lock:** revoke table
+  INSERT/UPDATE on `agents` from anon/authenticated, then re-grant only the
+  business columns. The five trust columns (verified, verified_via,
+  verification_status, verified_domain, verification_token) are writable ONLY by
+  service_role, so the badge is unforgeable even by the agent's own owner — RLS
+  alone would have let an owner set `verified=true`.
+- **DAL** (`markAgentDomainVerified`, the sole writer of the trust columns, via
+  the admin/service-role client) — called only after the action confirms
+  ownership + a token match.
+- **SSRF-guarded fetch** (`lib/verification/challenge.ts`, server-only): https
+  only; we build the URL from a validated bare hostname (no scheme/path/port/
+  userinfo injection); resolve the host and **reject any private / loopback /
+  link-local / reserved IP before any fetch**; `redirect: "manual"` (no
+  redirects); ~3s timeout; small max body; fixed `/.well-known` path.
+- **Verify flow** `verifyAgentDomainAction` + page
+  `/dashboard/agents/[id]/verify`: owner-gated; shows the token, the exact
+  challenge URL/path, and a domain field (prefilled from the endpoint host);
+  clear failure reasons (invalid domain / blocked address / unreachable / not
+  found / mismatch). Linked from the dashboard list and the edit page.
+- **Create/edit form unchanged** — it never exposed verification fields and the
+  DAL create/update never write them; the ONLY path to verified is the challenge.
+- **Machine surfaces** now reflect verification: `toMarkdown` (Status line +
+  `Verified domain:` line) and `toJsonLd` (`verified`, `verificationStatus`,
+  `verifiedDomain` PropertyValues). The token is never emitted. `/llms.txt`
+  structure unchanged. Profile header shows the badge + a `verified domain` chip.
+  A single helper `lib/verification/status.ts` (`isVerified`/`verifiedViaLabel`)
+  is the source of truth across renderers + components.
+- **Seed** sets each agent's verification *fixture* (verified fixtures →
+  `domain_verified` for their endpoint host); the real handshake runs only for
+  live operators — seed agents are never re-verified (DECISIONS §17).
+
+## Phase 5a — Verification
+- **SSRF gate PASSED (local unit run):** `isPublicIp` rejects loopback/private/
+  link-local/CGNAT/reserved (v4 + v6, incl. `::ffff:` mapped) and allows real
+  public IPs; `isValidPublicHostname`/`normalizeDomain` reject IP literals,
+  no-dot hosts, underscores, and strip scheme/userinfo/port/path;
+  `assertHostResolvesPublic('localhost')` and `fetchChallengeToken('localhost')`
+  both throw `blocked_address` **before any HTTP call**.
+- **Pre-migration tolerance:** mapper defaults the new fields, so logged-out
+  public + machine pages all 200; markdown/JSON-LD render verification from the
+  legacy `verified` fixture; no token leak; `/llms.txt` unchanged; the verify
+  page is auth-gated (307 → /login).
+- `typecheck` + `build` clean (`/dashboard/agents/[id]/verify` builds).
+- **PENDING (human, then re-run the committed gate):**
+  1. Apply `db/migrations/0004_add_domain_verification.sql` in the Supabase SQL
+     editor; re-run `npm run db:seed` so fixtures get their statuses.
+  2. `npx tsx db/verify/verify_0004.ts` — proves the **column-privilege security
+     gate**: an authenticated owner can create/edit agents but CANNOT set
+     verification_status / verified_domain / verified via UPDATE or INSERT
+     (42501); only the admin path flips the badge.
+  3. **Production happy path:** host the challenge file on a real domain, click
+     Verify → agent flips to `domain_verified`; profile badge, markdown twin,
+     and JSON-LD all reflect it; wrong/absent token → clear failure, status
+     unchanged.
 
 ## Phase 4c — Done (follow / like / bookmark)
 Understated, human-only affordances over the existing registry — small counts,

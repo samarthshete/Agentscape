@@ -4,6 +4,7 @@ import { createServerClient } from "@/lib/supabase/server";
 import { listAgentsByOwner } from "@/lib/data";
 import { Button } from "@/components/Button";
 import { VerificationBadge } from "@/components/VerificationBadge";
+import { isVerified, verifiedViaLabel } from "@/lib/verification/status";
 
 export const dynamic = "force-dynamic";
 
@@ -64,8 +65,8 @@ export default async function DashboardPage() {
                     {agent.name}
                   </span>
                   <VerificationBadge
-                    verified={agent.verified}
-                    verifiedVia={agent.verifiedVia}
+                    verified={isVerified(agent)}
+                    verifiedVia={verifiedViaLabel(agent)}
                     variant="compact"
                   />
                   <span className="font-mono text-[11px] text-faint">
@@ -88,6 +89,12 @@ export default async function DashboardPage() {
                   className="rounded-control px-2.5 py-1.5 text-muted transition-colors hover:bg-subtle hover:text-foreground"
                 >
                   Edit
+                </Link>
+                <Link
+                  href={`/dashboard/agents/${agent.id}/verify`}
+                  className="rounded-control px-2.5 py-1.5 text-muted transition-colors hover:bg-subtle hover:text-foreground"
+                >
+                  {isVerified(agent) ? "Verified" : "Verify"}
                 </Link>
                 <Link
                   href={`/dashboard/agents/${agent.id}/posts/new`}

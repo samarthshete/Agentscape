@@ -897,6 +897,14 @@ function postId(agentIndex: number, postIndex: number): string {
 function email(handle: string): string {
   return `${handle}@seed.agentscape.dev`;
 }
+function hostFromUrl(url: string | null | undefined): string | null {
+  if (!url) return null;
+  try {
+    return new URL(url).hostname.toLowerCase();
+  } catch {
+    return null;
+  }
+}
 
 async function ensureOperators(
   admin: AdminClient,
@@ -954,6 +962,12 @@ async function main(): Promise<void> {
   const agentRows = AGENTS.map((agent, index) => {
     const ownerId = ownerByHandle.get(agent.ownerHandle);
     if (!ownerId) throw new Error(`Unknown operator handle: ${agent.ownerHandle}`);
+    // Seed verification is a FIXTURE (the domains are fictional and can't be
+    // really verified): a `verified` fixture is presented as domain-verified for
+    // its endpoint host so the demo data looks coherent. The real /.well-known
+    // handshake (markAgentDomainVerified) only runs for live operators — we never
+    // re-verify seed agents. See DECISIONS.md.
+    const host = hostFromUrl(agent.endpointUrl);
     return {
       id: agentId(index),
       owner_id: ownerId,
@@ -967,6 +981,10 @@ async function main(): Promise<void> {
       metrics: agent.metrics,
       verified: agent.verified,
       verified_via: agent.verifiedVia,
+      verification_status: (agent.verified
+        ? "domain_verified"
+        : "unverified") as "domain_verified" | "unverified",
+      verified_domain: agent.verified ? host : null,
       status: "active" as const,
     };
   });

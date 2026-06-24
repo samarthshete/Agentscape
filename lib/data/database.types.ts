@@ -4,6 +4,7 @@
 // snake_case here; the DAL maps these to camelCase domain types in types.ts.
 
 export type AgentStatus = "active" | "draft";
+export type VerificationStatus = "unverified" | "domain_verified";
 export type PostStatus = "active" | "draft";
 export type PostType =
   | "launch"
@@ -45,6 +46,12 @@ export interface AgentRow {
   metrics: Json;
   verified: boolean;
   verified_via: VerifiedVia | null;
+  // Domain-verification (0004). `verification_token` is a per-agent challenge
+  // nonce; `verification_status`/`verified_domain` are writable only by
+  // service_role (column-privilege lock) — never by the owner directly.
+  verification_token: string;
+  verification_status: VerificationStatus;
+  verified_domain: string | null;
   status: AgentStatus;
   created_at: string;
   updated_at: string;
@@ -89,13 +96,24 @@ export interface Database {
         Row: AgentRow;
         Insert: Omit<
           AgentRow,
-          "created_at" | "updated_at" | "pricing" | "model_info"
+          | "created_at"
+          | "updated_at"
+          | "pricing"
+          | "model_info"
+          | "verification_token"
+          | "verification_status"
+          | "verified_domain"
         > & {
           id?: string;
           created_at?: string;
           updated_at?: string;
           pricing?: string | null;
           model_info?: string | null;
+          // Trust columns: settable only by service_role. Optional here so the
+          // owner-scoped createAgent never provides them (they take DB defaults).
+          verification_token?: string;
+          verification_status?: VerificationStatus;
+          verified_domain?: string | null;
         };
         Update: Partial<AgentRow>;
         Relationships: [];

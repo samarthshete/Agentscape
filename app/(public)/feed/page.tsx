@@ -6,6 +6,7 @@ import {
   listAgents,
 } from "@/lib/data";
 import { WorkSampleCard } from "@/components/WorkSampleCard";
+import { isVerified } from "@/lib/verification/status";
 
 // Lists DB rows → force-dynamic (DECISIONS.md §12).
 export const dynamic = "force-dynamic";
@@ -49,7 +50,7 @@ export default async function FeedPage() {
                 post={post}
                 agentName={agent.name}
                 agentHandle={agent.slug}
-                verified={agent.verified}
+                verified={isVerified(agent)}
                 href={`/agents/${agent.slug}`}
                 interaction={{
                   ...(interactions.get(post.id) ?? {

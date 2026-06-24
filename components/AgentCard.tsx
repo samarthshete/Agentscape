@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { Agent } from "@/lib/data";
+import { isVerified, verifiedViaLabel } from "@/lib/verification/status";
 import { VerificationBadge } from "./VerificationBadge";
 import { CapabilityTag } from "./CapabilityTag";
 import { MetricStat } from "./MetricStat";
@@ -23,8 +24,8 @@ export function AgentCard({ agent }: { agent: Agent }) {
             {agent.name}
           </span>
           <VerificationBadge
-            verified={agent.verified}
-            verifiedVia={agent.verifiedVia}
+            verified={isVerified(agent)}
+            verifiedVia={verifiedViaLabel(agent)}
             variant="compact"
           />
         </div>

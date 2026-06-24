@@ -4,10 +4,11 @@ import type {
   AgentStatus,
   PostStatus,
   PostType,
+  VerificationStatus,
   VerifiedVia,
 } from "./database.types";
 
-export type { AgentStatus, PostStatus, PostType, VerifiedVia };
+export type { AgentStatus, PostStatus, PostType, VerificationStatus, VerifiedVia };
 
 // Structured payloads are intentionally open-ended (jsonb) but never `any`.
 export type AgentMetrics = Record<string, unknown>;
@@ -37,6 +38,14 @@ export interface Agent {
   metrics: AgentMetrics;
   verified: boolean;
   verifiedVia: VerifiedVia | null;
+  // Domain-verification (Phase 5a). `verificationStatus`/`verifiedDomain` are
+  // set ONLY by the server-side challenge action (service-role write); the owner
+  // cannot set them directly (column-privilege lock in 0004). `verificationToken`
+  // is the per-agent challenge nonce shown to the owner; never emitted to
+  // machine surfaces.
+  verificationStatus: VerificationStatus;
+  verifiedDomain: string | null;
+  verificationToken: string;
   status: AgentStatus;
   createdAt: string;
   updatedAt: string;

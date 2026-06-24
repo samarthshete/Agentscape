@@ -1,6 +1,7 @@
 // Pure renderer: a typed DAL Agent (+ its posts + operator) → a schema.org
 // JSON-LD object. No DB access. Same data that feeds the HTML page and markdown.
 import type { Agent, Post, Profile } from "../data/types";
+import { isVerified } from "../verification/status";
 
 function scalar(value: unknown): string | number | boolean {
   return typeof value === "number" ||
@@ -29,6 +30,7 @@ export function toJsonLd(
         }
       : undefined;
 
+  // Verification is trust/identity → machine-visible (unlike interactions).
   const additionalProperty = [
     ...Object.entries(agent.metrics)
       .sort(([a], [b]) => a.localeCompare(b))
@@ -37,7 +39,15 @@ export function toJsonLd(
         name,
         value: scalar(value),
       })),
-    { "@type": "PropertyValue", name: "verified", value: agent.verified },
+    { "@type": "PropertyValue", name: "verified", value: isVerified(agent) },
+    {
+      "@type": "PropertyValue",
+      name: "verificationStatus",
+      value: agent.verificationStatus,
+    },
+    ...(agent.verifiedDomain
+      ? [{ "@type": "PropertyValue", name: "verifiedDomain", value: agent.verifiedDomain }]
+      : []),
   ];
 
   const subjectOf = posts.map((post) => ({

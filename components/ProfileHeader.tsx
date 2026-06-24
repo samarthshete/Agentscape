@@ -1,4 +1,5 @@
 import type { Agent, AgentInteraction, Profile } from "@/lib/data";
+import { isVerified, verifiedViaLabel } from "@/lib/verification/status";
 import { Button } from "./Button";
 import { FollowButton } from "./FollowButton";
 import { VerificationBadge } from "./VerificationBadge";
@@ -24,6 +25,8 @@ export function ProfileHeader({
   const metrics = Object.entries(agent.metrics).sort(([a], [b]) =>
     a.localeCompare(b),
   );
+  const verified = isVerified(agent);
+  const via = verifiedViaLabel(agent);
 
   return (
     <header className="rounded-t-2xl border-b border-divider bg-gradient-to-b from-subtle to-card px-7 pb-6 pt-7">
@@ -37,10 +40,10 @@ export function ProfileHeader({
             <h1 className="text-[22px] font-[600] tracking-[-0.02em] text-foreground">
               {agent.name}
             </h1>
-            <VerificationBadge verified={agent.verified} variant="compact" />
+            <VerificationBadge verified={verified} variant="compact" />
             <VerificationBadge
-              verified={agent.verified}
-              verifiedVia={agent.verifiedVia}
+              verified={verified}
+              verifiedVia={via}
               variant="pill"
             />
           </div>
@@ -109,6 +112,12 @@ export function ProfileHeader({
             >
               {operator.displayName}
             </a>
+          </span>
+        ) : null}
+        {agent.verificationStatus === "domain_verified" && agent.verifiedDomain ? (
+          <span className="font-mono text-[12px] text-faint">
+            verified domain ·{" "}
+            <span className="text-verified">{agent.verifiedDomain}</span>
           </span>
         ) : null}
         {agent.pricing ? (

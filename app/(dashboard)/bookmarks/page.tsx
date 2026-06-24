@@ -6,6 +6,7 @@ import {
   listBookmarkedPosts,
 } from "@/lib/data";
 import { WorkSampleCard } from "@/components/WorkSampleCard";
+import { isVerified } from "@/lib/verification/status";
 
 // Reads DB rows under the user's session (bookmarks are self-RLS) → force-dynamic.
 export const dynamic = "force-dynamic";
@@ -65,7 +66,7 @@ export default async function SavedPage() {
                 post={post}
                 agentName={agent.name}
                 agentHandle={agent.slug}
-                verified={agent.verified}
+                verified={isVerified(agent)}
                 href={`/agents/${agent.slug}`}
                 interaction={{
                   ...(interactions.get(post.id) ?? {

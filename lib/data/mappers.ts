@@ -41,6 +41,11 @@ export function mapAgent(row: AgentRow): Agent {
     metrics: toRecord(row.metrics),
     verified: row.verified,
     verifiedVia: row.verified_via,
+    // Tolerant of the pre-0004 state (columns absent → sensible defaults) so the
+    // app stays shippable until the migration is applied.
+    verificationStatus: row.verification_status ?? "unverified",
+    verifiedDomain: row.verified_domain ?? null,
+    verificationToken: row.verification_token ?? "",
     status: row.status,
     createdAt: row.created_at,
     updatedAt: row.updated_at,

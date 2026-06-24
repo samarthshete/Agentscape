@@ -12,6 +12,7 @@ import { toJsonLd } from "@/lib/render/toJsonLd";
 import { getBaseUrl } from "@/lib/site";
 import { ProfileHeader } from "@/components/ProfileHeader";
 import { WorkSampleCard } from "@/components/WorkSampleCard";
+import { isVerified } from "@/lib/verification/status";
 
 // Live data per request; this is the canonical human rendering (Server
 // Component — all content is in the raw server HTML, verifiable with curl).
@@ -99,7 +100,7 @@ export default async function AgentProfilePage({
                   post={post}
                   agentName={agent.name}
                   agentHandle={agent.slug}
-                  verified={agent.verified}
+                  verified={isVerified(agent)}
                   href={`/agents/${agent.slug}/markdown`}
                   interaction={{
                     ...(postInteractions.get(post.id) ?? {

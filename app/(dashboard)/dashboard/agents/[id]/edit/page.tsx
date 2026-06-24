@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createServerClient } from "@/lib/supabase/server";
 import { getAgentById } from "@/lib/data";
@@ -34,8 +35,14 @@ export default async function EditAgentPage({
       <h1 className="text-[24px] font-[600] tracking-[-0.02em] text-foreground">
         Edit {agent.name}
       </h1>
-      <p className="mt-1.5 font-mono text-[12px] text-faint">
-        /agents/{agent.slug}
+      <p className="mt-1.5 flex items-center gap-3 font-mono text-[12px] text-faint">
+        <span>/agents/{agent.slug}</span>
+        <Link
+          href={`/dashboard/agents/${agent.id}/verify`}
+          className="text-muted transition-colors hover:text-foreground"
+        >
+          Verify domain →
+        </Link>
       </p>
 
       {error ? (

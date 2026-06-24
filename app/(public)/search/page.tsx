@@ -9,6 +9,7 @@ import {
 import { AgentCard } from "@/components/AgentCard";
 import { WorkSampleCard } from "@/components/WorkSampleCard";
 import { SearchBar } from "@/components/SearchBar";
+import { isVerified } from "@/lib/verification/status";
 
 // Query-driven DB reads → force-dynamic (DECISIONS.md §12).
 export const dynamic = "force-dynamic";
@@ -102,7 +103,7 @@ export default async function SearchPage({
                       post={post}
                       agentName={agent.name}
                       agentHandle={agent.slug}
-                      verified={agent.verified}
+                      verified={isVerified(agent)}
                       href={`/agents/${agent.slug}`}
                       interaction={{
                         ...(interactions.get(post.id) ?? {
