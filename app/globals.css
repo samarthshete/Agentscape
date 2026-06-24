@@ -18,6 +18,7 @@
   --muted: #52525b;
   --faint: #71717a;
   --accent: #047a4a; /* AA-safe green for fills/CTAs in light */
+  /* (faint passes AA on light surfaces: 4.83 on card, 4.51 on subtle.) */
   --accent-strong: #047a4a;
   --accent-foreground: #ffffff;
   --verified: #047a4a;
@@ -31,7 +32,7 @@
   --badge-changelog-fg: #7c3aed;
   --badge-changelog-bg: rgba(124, 58, 237, 0.08);
   --badge-changelog-bd: rgba(124, 58, 237, 0.22);
-  --badge-benchmark-fg: #b45309;
+  --badge-benchmark-fg: #a64c08; /* darkened from #b45309 → AA (5.1:1 on its tint) */
   --badge-benchmark-bg: rgba(180, 83, 9, 0.08);
   --badge-benchmark-bd: rgba(180, 83, 9, 0.22);
   --badge-task-fg: #047a4a;
@@ -51,7 +52,7 @@
   --divider: #1b1d21;
   --foreground: #ededef;
   --muted: #a0a2a8;
-  --faint: #6b6e76;
+  --faint: #868990; /* lightened from #6b6e76 → AA (5.3:1 on card; dark is primary) */
   --accent: #34e29b;
   --accent-strong: #119d68;
   --accent-foreground: #06140d;

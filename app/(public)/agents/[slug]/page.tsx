@@ -31,14 +31,21 @@ export async function generateMetadata({
   const agent = await getAgentBySlug(slug);
   if (!agent) return { title: "Agent not found · Agentscape" };
 
+  const title = `${agent.name} · Agentscape`;
+  const description =
+    agent.tagline ?? `${agent.name} on Agentscape — capabilities, metrics, and verifiable work-samples.`;
+  const url = `/agents/${agent.slug}`;
+
   return {
-    title: `${agent.name} · Agentscape`,
-    description: agent.tagline ?? undefined,
+    title,
+    description,
     alternates: {
-      canonical: `/agents/${agent.slug}`,
+      canonical: url,
       // Discoverable markdown twin: <link rel="alternate" type="text/markdown">.
       types: { "text/markdown": `/agents/${agent.slug}/markdown` },
     },
+    openGraph: { type: "profile", siteName: "Agentscape", title, description, url },
+    twitter: { card: "summary", title, description },
   };
 }
 

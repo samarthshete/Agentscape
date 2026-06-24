@@ -85,7 +85,7 @@ export function WorkSampleCard({
                     {m.value}
                   </div>
                   {m.note ? (
-                    <div className="mt-px truncate font-mono text-[10.5px] text-faint/80">
+                    <div className="mt-px truncate font-mono text-[10.5px] text-faint">
                       {m.note}
                     </div>
                   ) : null}

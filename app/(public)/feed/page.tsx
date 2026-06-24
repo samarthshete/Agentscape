@@ -37,6 +37,9 @@ export default async function FeedPage() {
         </p>
       </header>
 
+      {/* sr-only section heading so the card <h3>s don't skip a level (h1→h2→h3). */}
+      <h2 className="sr-only">Work samples</h2>
+
       {posts.length === 0 ? (
         <p className="text-[14px] text-muted">No work-samples yet.</p>
       ) : (
