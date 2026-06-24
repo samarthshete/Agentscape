@@ -14,6 +14,7 @@ const ERRORS: Record<string, string> = {
   missing_code: "Sign-in was cancelled or the link expired. Try again.",
   no_user: "We couldn't read your account. Try again.",
   no_oauth_url: "Couldn't start Google sign-in. Try again.",
+  too_many_attempts: "Too many sign-in attempts. Please wait a minute and try again.",
 };
 
 export default async function LoginPage({

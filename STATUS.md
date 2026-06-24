@@ -3,10 +3,44 @@
 > Updated at the end of every working session (operating rule).
 
 ## Current phase
-**Phase 6 (writeup) — README + ARCHITECTURE + DEMO. COMPLETE (2026-06-24).**
-5a complete + human gate PASSED (2026-06-24). 4c complete (2026-06-23). 4b human
-gate PASSED (2026-06-22). Phase 2 de-risk gate PASSED (2026-06-21).
-Remaining: **Phase 5b (rate-limiting)** is the one functional gap deferred.
+**Phase 5b (rate-limiting) — COMPLETE (2026-06-24).** All functional phases done.
+Phase 6 writeup complete (2026-06-24). 5a complete + human gate PASSED. 4c
+complete. 4b human gate PASSED. Phase 2 de-risk gate PASSED.
+Remaining: only the **Lighthouse / a11y polish pass**.
+
+## Phase 5b — Done (rate limiting)
+Upstash Redis via `@upstash/ratelimit` (sliding window), centralized in
+`lib/ratelimit.ts` (`server-only`) — one module builds the client + all limiters;
+server actions call `rateLimit(bucket, key)`. **Fail-open**: absent env vars or a
+Redis error → allow + one-time warning, so local dev and the demo never break;
+limiting engages only where configured (Vercel).
+- **Limited (writes + auth), keyed by user id / IP:** `mutation` 20/min (create/
+  update agent, create post), `interaction` 60/min (follow/like/bookmark),
+  `verify` 5/10min (domain-verify — strictest; outbound fetch + service-role
+  write), `auth` 10/10min per IP (OAuth start).
+- **Friendly on limit:** form actions redirect with `?error=…`; interaction
+  islands get a `rate_limited` WriteResult and roll back (visible, not silent);
+  auth → `/login?error=too_many_attempts`. Guard in front of actions only — DAL,
+  RLS, renderers, and machine surfaces unchanged.
+- **No read-surface limit** (deliberate): a per-IP cap on `/llms.txt`/markdown
+  could trip a normal external-LLM fetch (shared egress IPs). The demo wins. See
+  DECISIONS §19.
+- Env: `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN` (added to `.env.example`
+  + commented in `.env.local`; **set both in Vercel to activate in prod**).
+
+## Phase 5b — Verification
+- **Fail-open PASSED** (`db/verify/verify_ratelimit.ts`, no creds): 7/7 allowed
+  despite the 5/10min verify bucket, warning logged once.
+- **Machine surfaces unaffected:** single fetch of `/llms.txt` (text/plain),
+  `/agents/atlas-research/markdown` (text/markdown), profile, feed all 200; 21
+  markdown links unchanged. No limiter touches `lib/render`, `/llms.txt`, or the
+  markdown route.
+- `typecheck` + `build` clean.
+- **PENDING (human, prod):** set Upstash creds in Vercel, then `verify` ×6 quickly
+  → 6th shows "doing that a bit too fast"; or run
+  `NODE_OPTIONS=--conditions=react-server npx tsx db/verify/verify_ratelimit.ts`
+  with creds (expect 5 allowed / 2 blocked). (Pre-existing Next.js 15.0.5 audit
+  advisories are unrelated to this phase — a separate upgrade.)
 
 ## Phase 6 — Done (reviewer-facing docs)
 - **README.md** rewritten (was a stale Phase-0 stub): positioning + the explicit

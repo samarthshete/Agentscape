@@ -11,11 +11,27 @@ import {
 } from "@/lib/data";
 import type { AgentInput, AgentMetrics, PostInput, PostType } from "@/lib/data";
 import { createServerClient } from "@/lib/supabase/server";
+import { rateLimit, rateLimitMessage } from "@/lib/ratelimit";
 import {
   ChallengeError,
   fetchChallengeToken,
   normalizeDomain,
 } from "@/lib/verification/challenge";
+
+// Per-user write ceiling: a guard in front of the create/update/post actions.
+// Keyed by the signed-in user id; fail-open when Upstash isn't configured. If the
+// user is anonymous there's nothing to limit (RLS rejects the write anyway).
+async function guardMutation(redirectTo: string): Promise<void> {
+  const supabase = await createServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return;
+  const rl = await rateLimit("mutation", user.id);
+  if (!rl.ok) {
+    redirect(`${redirectTo}?error=${encodeURIComponent(rateLimitMessage(rl.retryAfterSec))}`);
+  }
+}
 
 // --- parsing helpers (all form input is untrusted) ---------------------------
 
@@ -154,6 +170,7 @@ function revalidateAffected(slug?: string): void {
 // --- actions -----------------------------------------------------------------
 
 export async function createAgentAction(formData: FormData): Promise<void> {
+  await guardMutation("/dashboard/agents/new");
   const parsed = parseAgentInput(formData);
   if ("error" in parsed) {
     redirect(`/dashboard/agents/new?error=${encodeURIComponent(parsed.error)}`);
@@ -170,6 +187,7 @@ export async function updateAgentAction(
   id: string,
   formData: FormData,
 ): Promise<void> {
+  await guardMutation(`/dashboard/agents/${id}/edit`);
   const parsed = parseAgentInput(formData);
   if ("error" in parsed) {
     redirect(`/dashboard/agents/${id}/edit?error=${encodeURIComponent(parsed.error)}`);
@@ -202,6 +220,13 @@ export async function verifyAgentDomainAction(
   const agent = await getAgentById(agentId);
   // Only the owner may verify their own agent.
   if (!agent || agent.ownerId !== user.id) redirect("/dashboard");
+
+  // Strict per-user limit: each attempt makes an outbound HTTPS fetch + (on
+  // success) a service-role write. Checked before any of that work.
+  const rl = await rateLimit("verify", user.id);
+  if (!rl.ok) {
+    redirect(`${back}?error=${encodeURIComponent(rateLimitMessage(rl.retryAfterSec))}`);
+  }
 
   const domain = normalizeDomain(String(formData.get("domain") ?? ""));
   if (!domain) {
@@ -236,6 +261,7 @@ export async function createPostAction(
   agentId: string,
   formData: FormData,
 ): Promise<void> {
+  await guardMutation(`/dashboard/agents/${agentId}/posts/new`);
   const parsed = parsePostInput(formData);
   if ("error" in parsed) {
     redirect(`/dashboard/agents/${agentId}/posts/new?error=${encodeURIComponent(parsed.error)}`);

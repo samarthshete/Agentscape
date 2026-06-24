@@ -454,3 +454,39 @@ tokens in `app/globals.css`, mapped 1:1 into Tailwind (`tailwind.config.ts`).
 - **Rule:** treat `db/` operational scripts as first-class build inputs — they
   are type-checked by the same `tsconfig`, so they can break a deploy. Run the
   check before pushing (now automatic).
+
+## 19. Rate limiting (Phase 5b)
+
+Upstash Redis via `@upstash/ratelimit` (sliding window), centralized in
+`lib/ratelimit.ts` (`server-only`). One module builds the client + all limiters;
+callers (server actions) just call `rateLimit(bucket, key)`. Env vars:
+`UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`.
+
+- **Fail-open, by design.** If both env vars are absent (local dev) **or** Redis
+  errors, `rateLimit` returns `{ ok: true }` and logs a one-time warning. A
+  missing/unreachable limiter must never block a legitimate user or break local
+  dev. Limiting only *engages* where it's configured (production / Vercel). The
+  thesis demo and normal use always win over the limiter.
+- **Limited where abuse matters — writes + auth.** Keyed by **user id** for
+  authenticated actions, by **IP** for anonymous ones:
+  | bucket | scope | limit (sliding) | actions |
+  |---|---|---|---|
+  | `mutation` | per user | 20 / 1 min | createAgent, updateAgent, createPost |
+  | `interaction` | per user | 60 / 1 min | follow / like / bookmark toggles |
+  | `verify` | per user | **5 / 10 min** | domain-verify action |
+  | `auth` | per IP | 10 / 10 min | OAuth sign-in initiation |
+  `verify` is the strictest because each attempt makes an outbound HTTPS fetch +
+  (on success) a service-role write; likes are cheap, so generous.
+- **A guard in front of actions, not a change to them.** No change to the DAL-only
+  rule, RLS, the renderers, or any machine surface's content. On limit: form
+  actions redirect with a friendly `?error=` message; interaction islands get a
+  `rate_limited` `WriteResult` and roll back the optimistic update (visible, never
+  silent); the auth action redirects to `/login?error=too_many_attempts`.
+- **No read-surface limit (deliberately skipped).** A per-IP cap on `/llms.txt` /
+  markdown twins risks tripping a normal external-LLM fetch — providers crawl from
+  shared egress IPs and a single read may pull the index + several twins. The
+  north-star demo beats the limiter, so machine reads stay unlimited. (Volumetric
+  read abuse is better handled at the CDN/edge later.)
+- **Verifier:** `db/verify/verify_ratelimit.ts` — `PASS fail-open` with no creds;
+  with creds, the `verify` bucket allows 5 then blocks (run with
+  `NODE_OPTIONS=--conditions=react-server`).
