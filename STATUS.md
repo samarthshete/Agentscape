@@ -3,10 +3,52 @@
 > Updated at the end of every working session (operating rule).
 
 ## Current phase
-**Security patch — Next.js 15.0.5 → 15.5.19 — COMPLETE (2026-06-24).**
-All functional phases done (5b rate-limiting, Phase 6 writeup). 5a + 4b human
-gates PASSED. Phase 2 de-risk gate PASSED. Remaining: only the **Lighthouse /
-a11y polish pass**.
+**Phase 6 — Lighthouse / a11y polish — COMPLETE (2026-06-24). PROJECT COMPLETE.**
+All phases done. Security patch (Next 15.5.19), 5b rate-limiting, Phase 6 writeup
+done. 5a + 4b human gates PASSED. Phase 2 de-risk gate PASSED.
+
+## Phase 6 — Lighthouse / a11y polish (2026-06-24)
+Measure-then-fix; presentational only — no change to the design language, the four
+renderers, RLS, or any machine-surface content. Measured with Lighthouse (headless
+Chrome) on production, mobile + desktop.
+
+**Lighthouse, production (Perf / A11y / BestPractices / SEO):**
+
+| Page | BEFORE (mobile) | AFTER (mobile) | AFTER (desktop) |
+|---|---|---|---|
+| landing   | 100 / 100 / 96 / 100 | 100 / 100 / 100 / 100 | 100 / 100 / 100 / 100 |
+| feed      | 98 / **93** / 96 / 100 | 98 / **100** / 100 / 100 | 100 / 100 / 100 / 100 |
+| directory | 97 / 100 / 93 / 100 | 99 / 100 / 96 / 100 | 100 / 100 / 100 / 100 |
+| profile   | 98 / **95** / 96 / **92** | 99 / **100** / 100 / **100** | 100 / 100 / 100 / 100 |
+| search    | 99 / **95** / 96 / 100 | 99 / **100** / 100 / 100 | 100 / 100 / 100 / 100 |
+
+All targets met: Perf ≥98, A11y = 100, Best Practices ≥96, SEO = 100.
+
+**Fixes (presentational):**
+- **Contrast (AA, both themes — verified by WCAG math):** dark `--faint`
+  `#6b6e76 → #868990` (3.67 → 5.35 on card; dark is the primary canvas, which
+  Lighthouse's light-only run had missed); light `--badge-benchmark-fg`
+  `#b45309 → #a64c08` (4.49 → 5.14 — the one node axe flagged); proof-block note
+  `text-faint/80 → text-faint`.
+- **Heading order:** feed gained an `sr-only <h2>` so card `<h3>`s don't skip a
+  level (h1→h2→h3); profile/search already had a section `<h2>`.
+- **SEO:** root `metadataBase` + default OG/Twitter; profile `openGraph`/`twitter`
+  — canonical is now absolute (fixed the profile SEO 92).
+- **Best Practices:** `app/icon.svg` (brand mark) → no more `/favicon.ico` 404
+  console error (BP 96 → 100).
+
+**Deliberately not changed:** disabled pagination `text-faint/50` (inactive
+controls are WCAG-exempt and Lighthouse didn't flag them); no lazy-load/CLS work
+(there are no `<img>` — avatars are letter tiles, icons inline SVG); fonts already
+self-hosted via `next/font` (no FOUT/blocking); client JS already minimal (thin
+islands only).
+
+**Verification:** A11y = 100 on all pages (keyboard focus + names pass — controls
+are native `button`/`a`/`input` with the global `:focus-visible` 2px accent ring;
+reduced-motion already honored); AA contrast confirmed light AND dark by
+computation; SSR content still in raw HTML (`curl`); four-way render + `/llms.txt`
+unchanged (21 links, `no-store`, JSON-LD `verificationStatus` intact, no meta leak
+in the markdown twin); `typecheck` + `build` clean; deployed + confirmed live.
 
 ## Security patch — Next.js 15.0.5 → 15.5.19 (2026-06-24)
 Upgraded off 15.0.5 to the latest patched 15.x; `eslint-config-next` matched;
