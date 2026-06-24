@@ -1,0 +1,16 @@
+#!/bin/sh
+# Pre-push guard — blocks pushing type-broken code (app code AND db/ scripts;
+# tsconfig includes **/*.ts). This is the local mirror of .github/workflows/ci.yml
+# and exists because a db/ helper's type error once failed the Vercel build and
+# silently froze production.
+#
+# Enable once per clone:   git config core.hooksPath .githooks
+# Emergency bypass:        git push --no-verify
+
+echo "pre-push: typecheck…"
+if ! npm run --silent typecheck; then
+  echo "" >&2
+  echo "pre-push: typecheck FAILED — fix the errors above, or bypass with 'git push --no-verify'." >&2
+  exit 1
+fi
+echo "pre-push: ok"

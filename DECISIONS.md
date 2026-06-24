@@ -427,3 +427,24 @@ tokens in `app/globals.css`, mapped 1:1 into Tailwind (`tailwind.config.ts`).
   code tolerant of the pre-migration state (mapper defaults the new fields) and
   the human applies it + reseeds, then runs `db/verify/verify_0004.ts` for the
   column-privilege gate.
+
+## 18. Build/deploy safety — CI + pre-push (2026-06-24)
+
+- **Incident:** a strict-mode type error in a `db/` helper script
+  (`db/verify/verify_0004.ts`) failed `next build` on Vercel. Because Vercel keeps
+  the last good deploy when a build fails, **production silently froze on the
+  prior (4c) deploy** — no error surfaced in the app. `tsconfig` already includes
+  `**/*.ts`, so `npm run typecheck`/`next build` *do* cover db/ scripts; the gap
+  was purely that the check wasn't re-run before pushing.
+- **Guardrails added so it can't silently recur:**
+  - **GitHub Actions** (`.github/workflows/ci.yml`): `npm ci` → `npm run
+    typecheck` → `npm run build` on every push/PR. A broken commit now shows a
+    visible red check independent of Vercel's silent freeze. Build env vars are
+    placeholders (every DB route is dynamic and reads env at request time).
+  - **Pre-push hook** (`.githooks/pre-push`, enabled via `git config
+    core.hooksPath .githooks`): runs `npm run typecheck` before each push;
+    bypass with `git push --no-verify`.
+  - **`npm run check`** = typecheck + build, for a one-shot local gate.
+- **Rule:** treat `db/` operational scripts as first-class build inputs — they
+  are type-checked by the same `tsconfig`, so they can break a deploy. Run the
+  check before pushing (now automatic).

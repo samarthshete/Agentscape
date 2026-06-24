@@ -1,0 +1,38 @@
+name: CI
+
+# Catch what froze production on 2026-06-24: a type error in a db/ helper script
+# failed `next build` on Vercel, silently freezing prod on an old deploy. This
+# runs the same checks on every push/PR so the failure is a visible red check
+# BEFORE Vercel deploys — and never a silent freeze. tsconfig includes **/*.ts,
+# so typecheck covers app code AND the db/ operational scripts.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Typecheck (app + db/ scripts)
+        run: npm run typecheck
+
+      - name: Build
+        run: npm run build
+        env:
+          # Placeholders: the build never connects (every DB route is dynamic and
+          # reads env at request time), but these keep any env access from throwing.
+          NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_ci_placeholder
+          SUPABASE_SECRET_KEY: sb_secret_ci_placeholder
