@@ -3,11 +3,29 @@
 > Updated at the end of every working session (operating rule).
 
 ## Current phase
-**Phase 5a — Real domain verification. CODE COMPLETE (2026-06-23)** — SSRF gate
-verified locally; column-privilege gate + production happy-path PENDING the
-human applying migration 0004. 4c complete (2026-06-23). 4b human gate PASSED
-(2026-06-22). Phase 2 de-risk gate PASSED (2026-06-21).
-Next is **Phase 5b (rate-limiting)**, then the writeup/demo runbook.
+**Phase 5a — Real domain verification. COMPLETE — human gate PASSED (2026-06-24).**
+4c complete (2026-06-23). 4b human gate PASSED (2026-06-22). Phase 2 de-risk gate
+PASSED (2026-06-21). Next is **Phase 5b (rate-limiting)**, then the writeup/demo
+runbook.
+
+## Phase 5a — human gate PASSED (2026-06-24)
+Migration 0004 applied. `@samarth` ran the real /.well-known handshake on
+production for **Atlas Briefing Agent**: hosted the per-agent token at
+`https://agentscape-kappa.vercel.app/.well-known/agentscape-challenge.txt` (served
+from the app's own `public/` folder), clicked Verify → flipped to
+`domain_verified` (`verified_domain = agentscape-kappa.vercel.app`). Confirmed
+live four ways: profile badge, markdown twin (`Status: … domain-verified …`),
+and JSON-LD (`verificationStatus`/`verifiedDomain`). Column-privilege gate
+(`db/verify/verify_0004.ts`) PASSED — owner cannot set any trust column via
+UPDATE/INSERT (42501); only the admin path flips it.
+
+### Deploy incident + fix (2026-06-24)
+The Phase 5a commit shipped a verifier script (`db/verify/verify_0004.ts`) with a
+strict-mode array-index type error. `next build` type-checks every `.ts` file, so
+the **Vercel build failed and production silently stayed on the Phase 4c deploy**
+(no verify route/button/token/badge). Fixed the guard, re-ran the full build, and
+redeployed — 5a is now live. Lesson: run `npm run build` (not just incremental)
+before pushing when adding any `.ts` under `db/`.
 
 ## Phase 5a — Done (HTTPS /.well-known domain verification)
 Real handshake: an operator hosts a per-agent token at
