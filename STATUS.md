@@ -3,10 +3,46 @@
 > Updated at the end of every working session (operating rule).
 
 ## Current phase
-**Phase 5a — Real domain verification. COMPLETE — human gate PASSED (2026-06-24).**
-4c complete (2026-06-23). 4b human gate PASSED (2026-06-22). Phase 2 de-risk gate
-PASSED (2026-06-21). Next is **Phase 5b (rate-limiting)**, then the writeup/demo
-runbook.
+**Phase 6 (writeup) — README + ARCHITECTURE + DEMO. COMPLETE (2026-06-24).**
+5a complete + human gate PASSED (2026-06-24). 4c complete (2026-06-23). 4b human
+gate PASSED (2026-06-22). Phase 2 de-risk gate PASSED (2026-06-21).
+Remaining: **Phase 5b (rate-limiting)** is the one functional gap deferred.
+
+## Phase 6 — Done (reviewer-facing docs)
+- **README.md** rewritten (was a stale Phase-0 stub): positioning + the explicit
+  "not Threads for agents" reframe; a **Try-the-demo** block near the top (paste
+  `/llms.txt` into a fresh LLM); three user classes; a **mermaid**
+  one-model→four-renderings diagram; the 16 features grouped (human / machine /
+  operator+auth+trust); stack; quickstart with the real env var names, migration
+  order, and `npm run db:seed`; scope/non-goals framed as judgment; links to the
+  other docs. Grounded in real paths, the real prod URL, and `atlas-research`.
+- **ARCHITECTURE.md** (new): the dual-audience problem; one-model→four-renderers
+  with two mermaid diagrams (render flow + auth flow); the disciplines (`lib/data`
+  the only DB access, `lib/render` pure, RSC-default); the freshness policy + why;
+  the data model table; the **security model** highlight (adversarial RLS `42501`,
+  the verification column-privilege lock, the SSRF guard); key decisions linking
+  DECISIONS.md.
+- **DEMO.md** (new): 5-minute numbered runbook (landing → feed/directory → profile
+  → four-way render → external-LLM read → Google sign-in → publish → verify →
+  badge flips), a 60-second version, gotchas (fresh LLM; the app's own
+  `/.well-known` holds one agent's token; real-looking endpoints; seed first), and
+  4 talking points (reframe / one-model-four-renderings / security / de-risk-first).
+- **.env.example** added (the three real env vars, documented).
+- Docs LINK to PRD/PLAN/DECISIONS/STATUS/CLAUDE rather than duplicating them.
+
+## Phase 6 — Housekeeping (Task 0)
+- **PRD.md committed** (was untracked) — part of the project charter.
+- **Typecheck scope confirmed aligned with the build.** `tsconfig` includes
+  `**/*.ts`, so `npm run typecheck` covers the whole project incl. `db/` scripts —
+  identical to what `next build` type-checks. Re-proved the exact 5a failure is
+  caught locally (`db/verify/verify_0004.ts … error TS2532`). Recorded in
+  DECISIONS.md §18 alongside the CI + pre-push guards added 2026-06-24.
+
+## Phase 6 — Verification
+- `npm run check` (typecheck + build) clean; all doc cross-links resolve; 3
+  mermaid blocks (1 README + 2 ARCHITECTURE) with bracket-safe labels.
+- Production demo URLs all 200 (`/`, `/agents`, `/feed`, `/llms.txt`,
+  `/agents/atlas-research` + `/markdown`, `/agents/atlas-briefing-agent`).
 
 ## Phase 5a — human gate PASSED (2026-06-24)
 Migration 0004 applied. `@samarth` ran the real /.well-known handshake on

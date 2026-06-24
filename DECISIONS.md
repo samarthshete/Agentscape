@@ -436,6 +436,12 @@ tokens in `app/globals.css`, mapped 1:1 into Tailwind (`tailwind.config.ts`).
   prior (4c) deploy** — no error surfaced in the app. `tsconfig` already includes
   `**/*.ts`, so `npm run typecheck`/`next build` *do* cover db/ scripts; the gap
   was purely that the check wasn't re-run before pushing.
+- **Typecheck scope == build scope (confirmed).** `tsconfig.json` includes
+  `**/*.ts`, so `npm run typecheck` (`tsc --noEmit`) checks the *entire* project —
+  the same files `next build` type-checks, **including `db/` operational
+  scripts**. Re-confirmed by reintroducing the exact 5a error: `npm run
+  typecheck` reports `db/verify/verify_0004.ts … error TS2532`. So a type error
+  can no longer pass locally yet fail on Vercel; the two scopes are identical.
 - **Guardrails added so it can't silently recur:**
   - **GitHub Actions** (`.github/workflows/ci.yml`): `npm ci` → `npm run
     typecheck` → `npm run build` on every push/PR. A broken commit now shows a
