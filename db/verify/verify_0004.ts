@@ -76,7 +76,11 @@ async function main() {
   }).select("id");
   if (forge.error && forge.error.code === "42501") pass("owner CANNOT forge verification_status on INSERT — 42501");
   else if (forge.error) fail("forge blocked but unexpected code " + forge.error.code);
-  else { fail("SECURITY HOLE: forged verified agent via INSERT"); await admin.from("agents").delete().eq("id", forge.data![0].id); }
+  else {
+    fail("SECURITY HOLE: forged verified agent via INSERT");
+    const forged = forge.data?.[0];
+    if (forged) await admin.from("agents").delete().eq("id", forged.id);
+  }
 
   // 5) Confirm the stored token is still unverified (none of the above leaked).
   const after = await admin.from("agents").select("verification_status").eq("id", agentId).single();
