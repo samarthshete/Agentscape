@@ -3,10 +3,29 @@
 > Updated at the end of every working session (operating rule).
 
 ## Current phase
-**Phase 5b (rate-limiting) — COMPLETE (2026-06-24).** All functional phases done.
-Phase 6 writeup complete (2026-06-24). 5a complete + human gate PASSED. 4c
-complete. 4b human gate PASSED. Phase 2 de-risk gate PASSED.
-Remaining: only the **Lighthouse / a11y polish pass**.
+**Security patch — Next.js 15.0.5 → 15.5.19 — COMPLETE (2026-06-24).**
+All functional phases done (5b rate-limiting, Phase 6 writeup). 5a + 4b human
+gates PASSED. Phase 2 de-risk gate PASSED. Remaining: only the **Lighthouse /
+a11y polish pass**.
+
+## Security patch — Next.js 15.0.5 → 15.5.19 (2026-06-24)
+Upgraded off 15.0.5 to the latest patched 15.x; `eslint-config-next` matched;
+React stays 18.3.1; App Router unchanged; **no code changes needed**.
+- **Resolves all Next.js advisories**, incl. **CVE-2025-29927** (CVSS 9.1
+  middleware auth-bypass — directly relevant since auth gating uses `@supabase/ssr`
+  middleware), and the Server-Actions/RSC DoS, cache-poisoning, image-optimization,
+  and middleware-redirect SSRF advisories. `npm audit` now shows **zero Next.js
+  findings**.
+- **Stayed on 15.x** (not Next 16, which would force React 19). Reviewed
+  15.1→15.5 notes — only deprecation warnings for unused features (`next lint`,
+  `legacyBehavior`, AMP, `next/image` quality); `next build` still lints.
+- **Regression PASSED:** `typecheck` + `build` clean; routes all `ƒ` (dynamic);
+  four-way render intact (HTML 200, markdown twin 200 `text/markdown`, JSON-LD
+  present, `/llms.txt` 200 `no-store`); middleware auth-gating works
+  (dashboard/onboarding → 307 `/login`); RLS unchanged (no DAL/policy edit).
+- **Remaining (non-Next, out of scope, low reachability):** `@supabase/auth-js`
+  path-routing (separate supabase-js major bump), `esbuild`/`tsx` (dev-only),
+  `postcss` (build-time; authored CSS). See DECISIONS §10.
 
 ## Phase 5b — Done (rate limiting)
 Upstash Redis via `@upstash/ratelimit` (sliding window), centralized in

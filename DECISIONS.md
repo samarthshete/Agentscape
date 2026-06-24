@@ -213,6 +213,29 @@ Polish and verification *depth* compress first if time runs short. These five do
   (Advisory details were taken from the task instruction, not independently
   verified here.)
 
+- **2026-06-24 — Next.js 15.0.5 → 15.5.19** (latest patched 15.x; `eslint-config-next`
+  bumped to match; React stays 18.3.1; App Router unchanged). Clears **all**
+  Next.js advisories `npm audit` flagged on 15.0.5 — most importantly
+  **CVE-2025-29927** (CVSS 9.1, middleware authorization bypass via the trusted
+  `x-middleware-subrequest` header; fixed in 15.2.3), directly relevant here since
+  auth gating rides on `@supabase/ssr` middleware — plus the Server-Actions/RSC
+  DoS, cache-poisoning, image-optimization, and middleware-redirect SSRF
+  advisories. Stayed on 15.x rather than Next 16 (16 would force a React 19 bump —
+  too much churn for a security patch). Reviewed the 15.1→15.5 release notes: the
+  only 15.5 changes are *deprecation warnings* (`next lint`, `next/link`
+  `legacyBehavior`, AMP, `next/image` quality/localPatterns) for features this app
+  doesn't use; `next build` still runs ESLint. No code changes were needed.
+  Regression verified: `typecheck` + `build` clean; the four-way render intact
+  (HTML/markdown/JSON-LD/`llms.txt` all 200 with correct content-types,
+  `/llms.txt` still `no-store`); middleware auth-gating works (dashboard/onboarding
+  → 307 `/login`); RLS write-scoping unchanged (no DAL/policy change).
+  - **Remaining advisories (not Next; out of scope, low reachability):**
+    `@supabase/auth-js ≤2.69.1` insecure path-routing (GHSA-8r88-6cj9-9fh5) —
+    needs a `@supabase/supabase-js` major bump, a separate task; `esbuild`/`tsx`
+    dev-server (GHSA-67mh-4wv8-2f99) — dev-only, not in the production runtime;
+    `postcss <8.5.10` CSS-stringify XSS (GHSA-qx2v-qp2m-jg93) — build-time only,
+    our CSS is authored, not user input. None reachable by a production request.
+
 ---
 
 ## 11. Phase 2 decisions (the four renderings)
