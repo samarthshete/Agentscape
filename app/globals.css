@@ -16,9 +16,8 @@
   --divider: #f0f0f1;
   --foreground: #18181b;
   --muted: #52525b;
-  --faint: #71717a;
+  --faint: #6b6b73; /* darkened from #71717a → AA with headroom (≈4.9 on subtle, the proof-block bg; 4.51 was razor-thin) */
   --accent: #047a4a; /* AA-safe green for fills/CTAs in light */
-  /* (faint passes AA on light surfaces: 4.83 on card, 4.51 on subtle.) */
   --accent-strong: #047a4a;
   --accent-foreground: #ffffff;
   --verified: #047a4a;

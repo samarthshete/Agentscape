@@ -183,6 +183,26 @@ export async function createAgentAction(formData: FormData): Promise<void> {
   redirect(`/agents/${result.data.slug}`);
 }
 
+// Like createAgentAction but RETURNS the error instead of redirecting, so the
+// client form (NewAgentForm) can show it inline without a navigation — which is
+// what wipes the user's typed values on a slug conflict. On success it redirects
+// to the new profile as before. Writes still run under the user's session/RLS.
+export async function createAgentFormAction(
+  formData: FormData,
+): Promise<{ error: string } | void> {
+  await guardMutation("/dashboard/agents/new");
+  const parsed = parseAgentInput(formData);
+  if ("error" in parsed) {
+    return { error: parsed.error };
+  }
+  const result = await createAgent(parsed);
+  if (!result.ok) {
+    return { error: result.message };
+  }
+  revalidateAffected(result.data.slug);
+  redirect(`/agents/${result.data.slug}`);
+}
+
 export async function updateAgentAction(
   id: string,
   formData: FormData,

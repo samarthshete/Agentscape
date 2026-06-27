@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { signOut } from "@/app/auth/actions";
 import { Button } from "./Button";
+import { MobileNav } from "./MobileNav";
 import { SearchBar } from "./SearchBar";
 import { ThemeToggle } from "./ThemeToggle";
 
@@ -30,7 +31,7 @@ export function TopNav({ account }: { account: NavAccount | null }) {
         </span>
       </Link>
 
-      <div className="hidden flex-none items-center gap-0.5 sm:flex">
+      <div className="hidden flex-none items-center gap-0.5 md:flex">
         {LINKS.map((link) => (
           <Link
             key={link.href}
@@ -52,50 +53,55 @@ export function TopNav({ account }: { account: NavAccount | null }) {
           Submit agent
         </Button>
 
-        {account === null ? (
-          <Link
-            href="/login"
-            className="rounded-control border border-border bg-card px-[13px] py-[7px] text-[13px] font-[540] text-foreground transition-colors hover:border-faint"
-          >
-            Sign in
-          </Link>
-        ) : (
-          <div className="flex items-center gap-1.5">
-            {account.handle ? (
-              <>
+        {/* Account / sign-in live inline on desktop; on mobile they move into the
+            hamburger menu (MobileNav) so the bar stays uncluttered at 390px. */}
+        <div className="hidden items-center md:flex">
+          {account === null ? (
+            <Link
+              href="/login"
+              className="rounded-control border border-border bg-card px-[13px] py-[7px] text-[13px] font-[540] text-foreground transition-colors hover:border-faint"
+            >
+              Sign in
+            </Link>
+          ) : (
+            <div className="flex items-center gap-1.5">
+              {account.handle ? (
+                <>
+                  <Link
+                    href="/bookmarks"
+                    className="rounded-control px-2 py-1.5 text-[13px] text-muted transition-colors hover:bg-subtle hover:text-foreground"
+                  >
+                    Saved
+                  </Link>
+                  <Link
+                    href={`/u/${account.handle}`}
+                    className="rounded-control px-2 py-1.5 font-mono text-[12px] text-muted transition-colors hover:bg-subtle hover:text-foreground"
+                  >
+                    @{account.handle}
+                  </Link>
+                </>
+              ) : (
                 <Link
-                  href="/bookmarks"
-                  className="hidden rounded-control px-2 py-1.5 text-[13px] text-muted transition-colors hover:bg-subtle hover:text-foreground sm:inline-flex"
+                  href="/onboarding"
+                  className="rounded-control px-2 py-1.5 text-[13px] text-accent transition-colors hover:underline"
                 >
-                  Saved
+                  Finish setup
                 </Link>
-                <Link
-                  href={`/u/${account.handle}`}
-                  className="rounded-control px-2 py-1.5 font-mono text-[12px] text-muted transition-colors hover:bg-subtle hover:text-foreground"
+              )}
+              <form action={signOut}>
+                <button
+                  type="submit"
+                  className="rounded-control px-2 py-1.5 text-[13px] text-muted transition-colors hover:text-foreground"
                 >
-                  @{account.handle}
-                </Link>
-              </>
-            ) : (
-              <Link
-                href="/onboarding"
-                className="rounded-control px-2 py-1.5 text-[13px] text-accent transition-colors hover:underline"
-              >
-                Finish setup
-              </Link>
-            )}
-            <form action={signOut}>
-              <button
-                type="submit"
-                className="rounded-control px-2 py-1.5 text-[13px] text-muted transition-colors hover:text-foreground"
-              >
-                Sign out
-              </button>
-            </form>
-          </div>
-        )}
+                  Sign out
+                </button>
+              </form>
+            </div>
+          )}
+        </div>
 
         <ThemeToggle />
+        <MobileNav account={account} links={LINKS} />
       </div>
     </nav>
   );

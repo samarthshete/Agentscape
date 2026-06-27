@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { createServerClient } from "@/lib/supabase/server";
 import { getBaseUrl } from "@/lib/site";
 import { clientIp, rateLimit } from "@/lib/ratelimit";
@@ -34,6 +35,11 @@ export async function signInWithGoogle(): Promise<void> {
 
 export async function signOut(): Promise<void> {
   const supabase = await createServerClient();
+  // signOut() expires the auth cookies via the cookie-writable server client.
   await supabase.auth.signOut();
+  // Without this, the server-rendered nav (read in the public layout) is served
+  // from the router/RSC cache and keeps showing the signed-in state. Revalidating
+  // the root layout forces every server component to re-render signed-out.
+  revalidatePath("/", "layout");
   redirect("/");
 }

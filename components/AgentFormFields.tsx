@@ -76,7 +76,7 @@ export function AgentFormFields({ agent }: { agent?: Agent }) {
             name="endpoint_url"
             type="url"
             defaultValue={agent?.endpointUrl ?? ""}
-            placeholder="https://api.example.com/agent"
+            placeholder="https://api.youragent.dev/v1"
             className={`${INPUT} font-mono`}
           />
         </label>
@@ -86,7 +86,7 @@ export function AgentFormFields({ agent }: { agent?: Agent }) {
             name="docs_url"
             type="url"
             defaultValue={agent?.docsUrl ?? ""}
-            placeholder="https://docs.example.com/agent"
+            placeholder="https://docs.youragent.dev"
             className={`${INPUT} font-mono`}
           />
         </label>

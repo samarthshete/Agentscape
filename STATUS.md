@@ -7,6 +7,71 @@
 All phases done. Security patch (Next 15.5.19), 5b rate-limiting, Phase 6 writeup
 done. 5a + 4b human gates PASSED. Phase 2 de-risk gate PASSED.
 
+## Submission bug-fix pass (2026-06-27) — reviewer findings
+Presentational/behavioral only. NO change to the DAL, RLS, the four renderers, or
+any machine-surface *structure*; the one data edit (P3) was an agent's endpoint value.
+
+- **P1 — Mobile navigation.** Below `md` the inline links + search had no
+  replacement. Added `components/MobileNav.tsx` (thin client island): a labelled
+  hamburger (`md:hidden`) opening a menu with the search input + all nav links
+  (Feed/Directory/Operators/Docs) + account/Sign in/Sign out. Accessible:
+  `aria-label`/`aria-expanded`/`aria-controls`, Escape + outside-click + route-change
+  + resize-to-desktop close, focus moved into the panel on open and back to the
+  button on close. Portaled to `<body>` (the nav's `backdrop-blur` would otherwise
+  contain the `fixed` panel). Motion covered by the global reduced-motion guard.
+  TopNav: inline links `sm:flex`→`md:flex` and the account/sign-in cluster wrapped
+  `hidden md:flex` so they pair with the hamburger; Submit + ThemeToggle stay in the
+  bar. **Desktop nav unchanged.** Rest of the page stays RSC.
+- **P2 — Sign-out didn't transition.** Root cause (from code): `signOut()` cleared
+  the session but never revalidated, so the server-rendered nav was served from the
+  router/RSC cache and kept showing signed-in. Fix: `revalidatePath("/", "layout")`
+  before `redirect("/")` in `app/auth/actions.ts`. (Could not click-through prod
+  sign-in here — no Google session in this env; the dashboard layout already bounces
+  to /login when signed-out. Final real-session click-through is yours, like the
+  4a/4c/5a human gates.)
+- **P3 — Real endpoints.** Seed was already clean. The live, user-created **Atlas
+  Briefing Agent** row still pointed at `example.com`; re-pointed via the service-role
+  admin client to `https://api.atlasbrief.dev/v1/brief` (+ docs `docs.atlasbrief.dev`).
+  Verified live: zero `example.com` across all 21 markdown twins; 21 agents intact.
+  Also updated the create-form URL *placeholders* off `api.example.com`.
+- **P4 — Accessibility (surgical).** Icon-only buttons already had `aria-label`
+  (ThemeToggle, CopyButton, InteractionBar like/bookmark) — confirmed. Bumped light
+  `--faint` `#71717a`→`#6b6b73` so the proof block's muted monospace clears AA with
+  headroom (~4.9:1 on `bg-subtle`, up from a razor-thin 4.51). Dark `--faint` already
+  ~5.3. Global `:focus-visible` ring + reduced-motion guard already in place.
+- **P5 — Create-agent form lost input on slug conflict.** The action redirected with
+  `?error=`, and that navigation wiped the form. Added `createAgentFormAction` (returns
+  the error instead of redirecting) + `components/NewAgentForm.tsx` (client wrapper):
+  submits in an event handler and shows the error **in place** without navigating, so
+  the uncontrolled inputs keep their typed values. Success still redirects to the new
+  profile; the write still runs under the user's session/RLS. (React 18.3 — used a
+  plain handler, not `useActionState`.)
+- **Verify:** `typecheck` + `build` clean; all routes still `ƒ`; public pages ship 0
+  client components beyond the existing islands + the new MobileNav/NewAgentForm; shared
+  JS still 102 kB. `/llms.txt` 21 agents, four-way render unchanged. Mobile-menu /
+  sign-out / form click-throughs to confirm in a real browser on prod after deploy.
+
+## Demo add-on — agent-to-agent hiring (`demo/`)
+A standalone showcase built on top of the shipped substrate (no app/RLS/renderer
+change). A procurement agent (**Claude Opus 4.8**, real tool-use loop via
+`@anthropic-ai/sdk`, dev-dep only) is given a task + the public `/llms.txt` and
+nothing else; it discovers candidates, vets each via its markdown twin
+(capabilities + work-sample proof + verification standing) through a
+`fetch_agent_profile` tool, then calls `award_contract` to hire exactly one agent
+with cited verifiable evidence. Demonstrates the agent-economy loop ("agents do
+business with each other") running on a verifiable trust/identity layer.
+- **Files:** `demo/lib/agentscape.ts` (fetch+parse the machine surfaces only — no
+  DB), `demo/lib/hire.ts` (the loop), `demo/hire.ts` (narrated single run),
+  `demo/eval.ts` (capability-routing eval — gold = the hired agent's twin actually
+  carries a task-relevant capability; keyword-matched, slug-agnostic), `demo/README.md`.
+- **Scripts:** `npm run demo:hire` / `npm run demo:eval` (need `ANTHROPIC_API_KEY`;
+  target prod by default, override `AGENTSCAPE_BASE_URL`).
+- **Verified:** live fetch+parse of prod `/llms.txt` → 21 agents, twin fetch + gold
+  predicate match (no key needed); `typecheck` + `build` clean (demo `.ts` is in the
+  build's typecheck scope — the Phase-5a trap — and passes; 0 demo code in the app
+  bundle, shared JS still 102 kB). The Claude call itself is unrun here (no API key in
+  env) but follows the documented manual tool-use loop.
+
 ## Phase 6 — Lighthouse / a11y polish (2026-06-24)
 Measure-then-fix; presentational only — no change to the design language, the four
 renderers, RLS, or any machine-surface content. Measured with Lighthouse (headless
@@ -49,6 +114,69 @@ reduced-motion already honored); AA contrast confirmed light AND dark by
 computation; SSR content still in raw HTML (`curl`); four-way render + `/llms.txt`
 unchanged (21 links, `no-store`, JSON-LD `verificationStatus` intact, no meta leak
 in the markdown twin); `typecheck` + `build` clean; deployed + confirmed live.
+
+## Resume metrics — production measurements (2026-06-24)
+MEASURE-ONLY pass on the live deploy (`https://agentscape-kappa.vercel.app`). No
+product/renderer/RLS/machine-surface change. All numbers reproducible via the
+methods stated.
+
+**Fresh Lighthouse (headless Chrome via Chrome 12.x CLI, today). Perf / A11y / BP / SEO + LCP / CLS:**
+
+| Page | Mobile | LCP / CLS (m) | Desktop | LCP / CLS (d) |
+|---|---|---|---|---|
+| landing   | 99 / 100 / 100 / 100 | 2.2 s / 0     | 100 / 100 / 100 / 100 | 0.5 s / 0 |
+| feed      | 100 / 100 / 100 / 100 | 1.7 s / 0    | 100 / 100 / 100 / 100 | 0.5 s / 0 |
+| directory | 99 / 100 / **96** / 100 | 2.1 s / 0   | 100 / 100 / 100 / 100 | 0.5 s / 0 |
+| search    | 99 / 100 / 100 / 100 | 2.2 s / 0     | **90** / 100 / 100 / 100 | 0.5 s / 0 |
+| profile   | 99 / 100 / 100 / 100 | 2.2 s / 0     | 100 / 100 / 100 / 100 | 0.5 s / 0 |
+
+*How: `npx lighthouse@12 <url> --only-categories=… --preset=desktop|mobile
+--chrome-flags="--headless=new"`, JSON output, scores ×100. CLS = 0 on every page
+(letter-tile avatars + inline SVG, no `<img>`). No regression vs prior STATUS;
+directory-mobile BP 96 matches the earlier run; search-desktop Perf 90 is
+single-run variance (still ≥90 target).*
+
+**Token efficiency (the on-thesis metric) — agent `atlas-research`:**
+
+| Surface | Tokens (cl100k_base) | Bytes |
+|---|---|---|
+| Full rendered HTML page | 17,975 | 60,341 |
+| Markdown twin (`/markdown`) | 439 | 1,734 |
+| **Ratio (twin / HTML)** | **2.4 %** (≈41× smaller) | — |
+
+*How: `curl` both surfaces from prod; tokenized with the real tiktoken BPE
+`cl100k_base` via `@dqbd/tiktoken`. The agent is fully machine-legible in ~440
+tokens — 2.4 % of the HTML an LLM would otherwise ingest.*
+
+**Full-text search latency (`searchAgents`, live catalog):**
+
+| n | min | p50 | p95 | p99 | mean |
+|---|---|---|---|---|---|
+| 150 | 95 ms | 115 ms | 192 ms | 445 ms | 133 ms |
+
+*How: replays the exact DAL PostgREST query (Postgres `tsvector` `websearch` on
+`search_vector`, GIN-indexed, `order created_at desc`, `range 0–19`) over 6 terms
+× 25 iters, 12 warm-up discarded, one reused warm client. Client-side round-trip
+incl. network to the hosted Supabase region; min ~95 ms is the network floor, so
+the tsvector query itself adds little. Not a load test.*
+
+**Payload facts (from `next build`):**
+- First Load JS **shared by all routes: 102 kB** (two chunks: 54.2 + 46.2 kB).
+- Representative public routes (First Load JS): landing 106 kB, feed 104 kB,
+  directory 106 kB, search 108 kB, profile (`/agents/[slug]`) 108 kB.
+- **Public pages ship 0 client components** — every file under `app/(public)`
+  is an RSC (`grep "use client"` → 0). The only client JS is 5 thin shared
+  islands (ThemeToggle, SearchBar, CopyButton, InteractionBar, FollowButton).
+- *Source: `npm run build` route table + `grep -rl "use client"`.*
+
+## Phase 6 — re-verification (2026-06-24)
+Re-ran the exit gate against the committed/deployed state (no code changes; phase
+was already complete in commits `7cae8c1` + `87df825`). Reverted one stray
+whitespace-only edit to `0003_add_agent_pricing_model.sql` (already-applied
+migration) — working tree clean. `typecheck` + `build` clean (all routes `ƒ`).
+Production live: profile SSR content in raw HTML, JSON-LD present, markdown twin
+`text/markdown`, `/llms.txt` 21 links `no-store`; `/`, `/feed`, `/agents`,
+`/search`, profile all 200. No redeploy needed (nothing changed since last deploy).
 
 ## Security patch — Next.js 15.0.5 → 15.5.19 (2026-06-24)
 Upgraded off 15.0.5 to the latest patched 15.x; `eslint-config-next` matched;
